@@ -1,3 +1,15 @@
+<?php
+// ============================================================
+//  PARKINGSURE - Parqueadero Virtual 
+//  Archivo: parqueadero.php - Con módulos funcionando
+// ============================================================
+session_start();
+if (!isset($_SESSION['user'])) {
+    header('Location: login.php');
+    exit();
+}
+$rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -28,7 +40,8 @@
       inset: 0;
       background: linear-gradient(135deg, rgba(232,184,75,.03) 0%, transparent 50%);
       pointer-events: none;
-    }.lot-header {
+    }
+    .lot-header {
       display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px;
     }
     .lot-arrow { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--text-muted); }
@@ -46,62 +59,229 @@
       cursor: pointer; transition: transform .15s, box-shadow .15s; padding: 6px; gap: 2px;
     }
     .module:hover { transform: scale(1.06); z-index: 2; }
-    .module.libre   { background:rgba(16,185,129,.07); border-color:rgba(16,185,129,.3); color:var(--emerald); }
-    .module.libre:hover  { box-shadow:0 4px 18px rgba(16,185,129,.2); border-color:var(--emerald); }
-    .module.ocupado { background:rgba(239,68,68,.07); border-color:rgba(239,68,68,.3); color:var(--crimson); }
-    .module.ocupado:hover { box-shadow:0 4px 18px rgba(239,68,68,.2); border-color:var(--crimson); }
+    .module.libre   { background:#e8f5e8; border-color:#4caf50; color:#2e7d32; }
+    .module.libre:hover  { box-shadow:0 4px 18px rgba(76,175,80,.3); border-color:#388e3c; }
+    .module.ocupado { background:#ffebee; border-color:#f44336; color:#c62828; }
+    .module.ocupado:hover { box-shadow:0 4px 18px rgba(244,67,54,.3); border-color:#d32f2f; }
+    .module.mantenimiento { background:#fff8e1; border-color:#ffc107; color:#f57c00; }
+    .module.mantenimiento:hover { box-shadow:0 4px 18px rgba(255,193,7,.3); border-color:#ffb300; }
     .module.nuevo   { background:transparent; border:1.5px dashed var(--border-md); color:var(--text-muted); }
     .module.nuevo:hover  { border-color:var(--gold); color:var(--gold); }
     .mod-icon  { font-size:18px; line-height:1; }
     .mod-id    { font-size:8.5px; font-weight:700; letter-spacing:.5px; opacity:.85; }
     .mod-plate { font-size:7px; font-weight:800; letter-spacing:.8px; background:rgba(0,0,0,.2); padding:1px 4px; border-radius:3px; margin-top:1px; }
 
-    /* ── MODAL STEPS ── */
-    .step { display:none; }
-    .step.active { display:block; }
-
-    /* Ticket inside modal */
-    .mini-ticket {
-      background:var(--surface-3); border:1px solid var(--border-md);
-      border-radius:var(--r-md); padding:20px; margin:16px 0;
+    /* Context menu */
+    .context-menu {
+      position: fixed;
+      background: var(--surface-2);
+      border: 1px solid var(--border-md);
+      border-radius: var(--r-md);
+      padding: 8px 0;
+      min-width: 180px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      display: none;
     }
-    .mt-row { display:flex; justify-content:space-between; padding:7px 0; font-size:13px; border-bottom:1px solid var(--border); }
-    .mt-row:last-child { border:none; }
-    .mt-label { color:var(--text-muted); }
-    .mt-value { font-weight:600; }
-    .mt-total { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--gold); text-align:center; margin:12px 0 4px; }
-    .mt-currency { font-size:12px; color:var(--text-muted); text-align:center; margin-bottom:12px; }
-
-    /* Payment methods */
-    .pay-method { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
-    .pay-opt {
-      border:1.5px solid var(--border-md); border-radius:var(--r-md); padding:12px;
-      text-align:center; cursor:pointer; transition:border-color .18s, background .18s;
-      font-size:13px; font-weight:600; color:var(--text-secondary);
+    .context-menu.show { display: block; }
+    .context-item {
+      padding: 10px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .pay-opt:hover { border-color:var(--gold); color:var(--text-primary); }
-    .pay-opt.selected { border-color:var(--gold); background:var(--gold-dim); color:var(--gold); }
-    .pay-opt .pm-icon { font-size:20px; display:block; margin-bottom:5px; }
-
-    /* Confirm success */
-    .confirm-box {
-      background:rgba(16,185,129,.06); border:1px solid rgba(16,185,129,.2);
-      border-radius:var(--r-xl); padding:32px 24px; text-align:center;
+    .context-item:hover { background: var(--surface-3); }
+    .context-item.disabled {
+      color: var(--text-muted);
+      cursor: not-allowed;
+      opacity: 0.6;
     }
-    .confirm-icon { font-size:44px; margin-bottom:8px; }
-    .confirm-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--emerald); margin-bottom:6px; }
-    .confirm-sub { font-size:13px; color:var(--text-secondary); }
+    .context-item.disabled:hover { background: transparent; }
+    .context-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
 
-    /* Entry steps breadcrumb */
-    .steps-bar { display:flex; align-items:center; gap:8px; margin-bottom:20px; }
-    .sb-step { font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase;
-               padding:3px 10px; border-radius:20px; border:1px solid var(--border-md); color:var(--text-muted); }
-    .sb-step.done  { background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3); color:var(--emerald); }
-    .sb-step.active { background:var(--gold-dim); border-color:rgba(232,184,75,.3); color:var(--gold); }
-    .sb-arrow { font-size:10px; color:var(--text-muted); }
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+      animation: fadeIn 0.3s;
+    }
+    .modal.show { display: flex; align-items: center; justify-content: center; }
+    .modal-content {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideIn 0.3s;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--r-sm);
+      transition: all 0.2s;
+    }
+    .modal-close:hover {
+      background: var(--surface-3);
+      color: var(--text-primary);
+    }
+    .modal-body {
+      padding: 24px;
+    }
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-1);
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      background: var(--surface-1);
+      color: var(--text-primary);
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(232,184,75,0.1);
+    }
+    .modulo-info {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .modulo-id {
+      background: var(--gold);
+      color: var(--surface-1);
+      padding: 4px 8px;
+      border-radius: var(--r-xs);
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .modulo-ubicacion {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .vehiculo-info {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .vehiculo-placa {
+      background: var(--crimson);
+      color: white;
+      padding: 4px 8px;
+      border-radius: var(--r-xs);
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .vehiculo-tiempo {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--r-sm);
+      margin: 16px 0;
+      border: 1px solid;
+    }
+    .alert-warning {
+      background: rgba(255,193,7,.1);
+      border-color: rgba(255,193,7,.3);
+      color: var(--gold);
+    }
+    .btn-danger {
+      background: var(--crimson);
+      color: white;
+      border: 1px solid var(--crimson);
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
 
-    @media(max-width:900px){ .lot-grid { grid-template-columns:repeat(4,1fr); } }
-    @media(max-width:600px){ .lot-grid { grid-template-columns:repeat(3,1fr); } .legend { gap:12px; } }
+    /* Grid de 4 columnas para estadísticas */
+    .stats-grid-4 { 
+      display:grid; 
+      grid-template-columns:repeat(4,1fr); 
+      gap:20px; 
+    }
+    @media(max-width:900px){ 
+      .lot-grid { grid-template-columns:repeat(4,1fr); }
+      .stats-grid-4 { grid-template-columns:repeat(2,1fr); }
+    }
+    @media(max-width:600px){ 
+      .lot-grid { grid-template-columns:repeat(3,1fr); } 
+      .legend { gap:12px; }
+      .stats-grid-4 { grid-template-columns:repeat(1,1fr); }
+    }
   </style>
 </head>
 <body>
@@ -111,19 +291,26 @@
     <div class="logo-mark">P</div>
     <div class="logo-text">PARKING<em>SURE</em></div>
   </a>
-  <div class="nav-links">
+  <button class="hamburger" id="hamburger-btn">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <div class="nav-links" id="nav-links">
     <a class="nb" href="dashboard.php"><span class="nav-icon"></span> Dashboard</a>
     <a class="nb active" href="parqueadero.php"><span class="nav-icon"></span> Parqueadero</a>
     <a class="nb" href="vehiculos.php"><span class="nav-icon"></span> Vehículos</a>
     <a class="nb" href="pagos.php"><span class="nav-icon"></span> Pagos</a>
+    <?php if ($rolUsuario === 'ADMINISTRADOR'): ?>
     <a class="nb" href="usuarios.php"><span class="nav-icon"></span> Usuarios</a>
     <a class="nb" href="servicios.php"><span class="nav-icon"></span> Servicios</a>
+    <?php endif; ?>
     <a class="nb" href="reportes.php"><span class="nav-icon"></span> Reportes</a>
   </div>
   <div class="nav-right">
-    <div class="user-avatar">C</div>
-    <div class="user-info"><div class="u-name">Cristian Longas</div><div class="u-role">Administrador</div></div>
-    <a class="btn-logout" href="login.php">Salir</a>
+    <div class="user-avatar"><?php echo htmlspecialchars(substr($_SESSION['nombre'] ?? 'U', 0, 1)); ?></div>
+    <div class="user-info"><div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div><div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div></div>
+    <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>
 
@@ -135,592 +322,785 @@
     <p class="page-sub">Estado de módulos en tiempo real — selecciona un espacio para registrar entrada o salida</p>
   </div>
 
-  <div class="stats-grid stats-grid-3">
+  <div class="stats-grid stats-grid-4">
     <div class="stat-card">
       <div class="stat-label">Módulos Totales</div>
-      <div class="stat-value gold" id="st-total">16</div>
+      <div class="stat-value gold" id="st-total">0</div>
       <div class="stat-sub">configurados</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Disponibles</div>
-      <div class="stat-value gold" id="st-free">10</div>
-      <div class="stat-sub">libres ahora</div>
+      <div class="stat-value gold" id="st-disponibles">0</div>
+      <div class="stat-sub">listos para uso</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Ocupados</div>
-      <div class="stat-value gold" id="st-busy">6</div>
-      <div class="stat-sub">en uso</div>
+      <div class="stat-value gold" id="st-ocupados">0</div>
+      <div class="stat-sub">con vehículos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Mantenimiento</div>
+      <div class="stat-value gold" id="st-mantenimiento">0</div>
+      <div class="stat-sub">no disponibles</div>
     </div>
   </div>
 
   <div class="toolbar">
     <div class="legend">
-      <div class="leg"><div class="leg-sq" style="background:rgba(16,185,129,.5);border:1px solid var(--emerald)"></div>Libre</div>
-      <div class="leg"><div class="leg-sq" style="background:rgba(239,68,68,.5);border:1px solid var(--crimson)"></div>Ocupado</div>
+      <div class="leg"><div class="leg-sq" style="background:#e8f5e8;border:1px solid #4caf50"></div>Libre</div>
+      <div class="leg"><div class="leg-sq" style="background:#ffebee;border:1px solid #f44336"></div>Ocupado</div>
+      <div class="leg"><div class="leg-sq" style="background:#fff8e1;border:1px solid #ffc107"></div>Mantenimiento</div>
     </div>
-    <button class="btn btn-primary" onclick="openAdd()">+ Agregar Módulo</button>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" onclick="window.location.href='vehiculos.php'">🚗 Registrar Vehículo</button>
+      <button class="btn btn-primary" onclick="openAdd()">+ Agregar Módulo</button>
+    </div>
   </div>
 
   <div class="lot-shell">
     <div class="lot-header">
       <span class="lot-arrow">⬅ ENTRADA</span>
-      <span class="lot-label-pill">🅿️ Parqueadero Doña Luz</span>
+      <span class="lot-label-pill">🅿 Parqueadero</span>
       <span class="lot-arrow">SALIDA ➡</span>
     </div>
     <div class="lot-grid" id="lotGrid"></div>
   </div>
 </div>
 
-
-<!-- ════════════════════════════════════════
-     MODAL: ENTRADA (módulo libre)
-════════════════════════════════════════ -->
-<div class="overlay" id="entradaOverlay">
-  <div class="modal" style="max-width:480px">
-
-    <!-- Breadcrumb -->
-    <div class="steps-bar" id="entradaStepsBar">
-      <span class="sb-step active" id="sb1">1 · Datos</span>
-      <span class="sb-arrow">›</span>
-      <span class="sb-step" id="sb2">2 · Servicio</span>
-      <span class="sb-arrow">›</span>
-      <span class="sb-step" id="sb3">3 · Confirmar</span>
-    </div>
-
-    <!-- STEP 1: Placa + propietario -->
-    <div class="step active" id="eStep1">
-      <div class="modal-header">
-        <div class="modal-title" id="eTitle">Registrar Entrada</div>
-        <div class="modal-sub" id="eSubtitle">Módulo seleccionado</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Placa del vehículo</label>
-        <div class="input-wrap">
-          <input class="form-input" id="ePlaca" placeholder="Ej: ABC-123" style="text-transform:uppercase">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Propietario / Cliente</label>
-        <input class="form-input" id="eOwner" placeholder="Nombre del cliente (opcional)">
-      </div>
-      <div id="eErr1" class="alert alert-error" style="display:none"></div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeO('entradaOverlay')">Cancelar</button>
-        <button class="btn btn-primary" style="flex:1" onclick="eNext1()">Siguiente →</button>
-      </div>
-    </div>
-
-    <!-- STEP 2: Tipo de vehículo + tarifa -->
-    <div class="step" id="eStep2">
-      <div class="modal-header">
-        <div class="modal-title">Tipo de Servicio</div>
-        <div class="modal-sub">Selecciona la tarifa aplicable</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tipo de vehículo</label>
-        <select class="form-select" id="eTipoVeh">
-          <option value="🚗">🚗 Automóvil</option>
-          <option value="🏍️">🏍️ Motocicleta</option>
-          <option value="🚛">🚛 Camión</option>
-          <option value="🚌">🚌 Bus</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tarifa aplicada</label>
-        <select class="form-select" id="eTarifa">
-          <option value="3000">🚗 Automóvil — $3.000/hora</option>
-          <option value="2000">🏍️ Motocicleta — $2.000/hora</option>
-          <option value="6000">🚛 Camión — $6.000/hora</option>
-          <option value="5000">🚌 Bus — $5.000/hora</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Hora de entrada</label>
-        <input class="form-input" type="time" id="eHoraEntrada">
-      </div>
-      <div id="eErr2" class="alert alert-error" style="display:none"></div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="eBack1()">← Atrás</button>
-        <button class="btn btn-primary" style="flex:1" onclick="eNext2()">Revisar →</button>
-      </div>
-    </div>
-
-    <!-- STEP 3: Confirmación -->
-    <div class="step" id="eStep3">
-      <div class="modal-header">
-        <div class="modal-title">Confirmar Entrada</div>
-        <div class="modal-sub">Verifica los datos antes de registrar</div>
-      </div>
-      <div class="mini-ticket">
-        <div class="mt-row"><span class="mt-label">Módulo</span><span class="mt-value" id="confModulo">—</span></div>
-        <div class="mt-row"><span class="mt-label">Placa</span><span class="mt-value" id="confPlaca" style="font-family:monospace">—</span></div>
-        <div class="mt-row"><span class="mt-label">Propietario</span><span class="mt-value" id="confOwner">—</span></div>
-        <div class="mt-row"><span class="mt-label">Tipo</span><span class="mt-value" id="confTipo">—</span></div>
-        <div class="mt-row"><span class="mt-label">Tarifa</span><span class="mt-value" id="confTarifa">—</span></div>
-        <div class="mt-row"><span class="mt-label">Hora entrada</span><span class="mt-value" id="confHora">—</span></div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="eBack2()">← Atrás</button>
-        <button class="btn btn-primary" style="flex:1" onclick="confirmarEntrada()">✓ Registrar Entrada</button>
-      </div>
-    </div>
-
-    <!-- STEP 4: Éxito -->
-    <div class="step" id="eStep4">
-      <div class="confirm-box" style="margin-top:8px">
-        <div class="confirm-icon">✅</div>
-        <div class="confirm-title">Entrada Registrada</div>
-        <div class="confirm-sub" id="confSuccessMsg">El vehículo fue asignado correctamente.</div>
-      </div>
-      <div class="modal-actions" style="margin-top:18px">
-        <button class="btn btn-secondary btn-full" onclick="closeO('entradaOverlay')">Cerrar</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-
-<!-- ════════════════════════════════════════
-     MODAL: SALIDA (módulo ocupado)
-════════════════════════════════════════ -->
-<div class="overlay" id="salidaOverlay">
-  <div class="modal" style="max-width:480px">
-
-    <!-- Breadcrumb -->
-    <div class="steps-bar" id="salidaStepsBar">
-      <span class="sb-step active" id="ss1">1 · Estadía</span>
-      <span class="sb-arrow">›</span>
-      <span class="sb-step" id="ss2">2 · Pago</span>
-      <span class="sb-arrow">›</span>
-      <span class="sb-step" id="ss3">3 · Confirmar</span>
-    </div>
-
-    <!-- STEP 1: Resumen de estadía -->
-    <div class="step active" id="sStep1">
-      <div class="modal-header">
-        <div class="modal-title" id="sTitle">Registrar Salida</div>
-        <div class="modal-sub" id="sSubtitle">Calculando estadía…</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Hora de salida</label>
-        <input class="form-input" type="time" id="sHoraSalida">
-      </div>
-      <div class="mini-ticket" id="salidaTicket">
-        <div class="mt-row"><span class="mt-label">Módulo</span><span class="mt-value" id="sModulo">—</span></div>
-        <div class="mt-row"><span class="mt-label">Placa</span><span class="mt-value" id="sPlaca" style="font-family:monospace">—</span></div>
-        <div class="mt-row"><span class="mt-label">Propietario</span><span class="mt-value" id="sOwner">—</span></div>
-        <div class="mt-row"><span class="mt-label">Hora entrada</span><span class="mt-value" id="sEntrada">—</span></div>
-        <div class="mt-row"><span class="mt-label">Hora salida</span><span class="mt-value" id="sSalida">—</span></div>
-        <div class="mt-row"><span class="mt-label">Duración</span><span class="mt-value" id="sDuracion">—</span></div>
-        <div class="mt-row"><span class="mt-label">Tarifa</span><span class="mt-value" id="sTarifaLabel">—</span></div>
-      </div>
-      <div class="mt-total" id="sTotal">$0</div>
-      <div class="mt-currency">Pesos Colombianos (COP)</div>
-      <div id="sErr1" class="alert alert-error" style="display:none"></div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeO('salidaOverlay')">Cancelar</button>
-        <button class="btn btn-primary" style="flex:1" onclick="sNext1()">Ir a Pago →</button>
-      </div>
-    </div>
-
-    <!-- STEP 2: Método de pago -->
-    <div class="step" id="sStep2">
-      <div class="modal-header">
-        <div class="modal-title">Método de Pago</div>
-        <div class="modal-sub">Selecciona cómo abona el cliente</div>
-      </div>
-      <div style="text-align:center;margin:16px 0 4px">
-        <div class="mt-total" id="sTotal2">$0</div>
-        <div class="mt-currency">Total a cobrar</div>
-      </div>
-      <div class="pay-method">
-        <div class="pay-opt selected" id="sp-efectivo" onclick="selectSPM('efectivo')">
-          <span class="pm-icon">💵</span>Efectivo
-        </div>
-        <div class="pay-opt" id="sp-transferencia" onclick="selectSPM('transferencia')">
-          <span class="pm-icon">📲</span>Transferencia
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="sBack1()">← Atrás</button>
-        <button class="btn btn-primary" style="flex:1" onclick="sNext2()">Revisar →</button>
-      </div>
-    </div>
-
-    <!-- STEP 3: Confirmar cobro -->
-    <div class="step" id="sStep3">
-      <div class="modal-header">
-        <div class="modal-title">Confirmar Cobro</div>
-        <div class="modal-sub">Resumen final antes de liberar el módulo</div>
-      </div>
-      <div class="mini-ticket">
-        <div class="mt-row"><span class="mt-label">Módulo</span><span class="mt-value" id="sConfModulo">—</span></div>
-        <div class="mt-row"><span class="mt-label">Placa</span><span class="mt-value" id="sConfPlaca" style="font-family:monospace">—</span></div>
-        <div class="mt-row"><span class="mt-label">Duración</span><span class="mt-value" id="sConfDur">—</span></div>
-        <div class="mt-row"><span class="mt-label">Total cobrado</span><span class="mt-value" style="color:var(--gold)" id="sConfTotal">—</span></div>
-        <div class="mt-row"><span class="mt-label">Método pago</span><span class="mt-value" id="sConfMetodo">—</span></div>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:8px">
-        <button class="btn btn-ghost" onclick="toast('📄 Factura PDF generada')">Factura PDF</button>
-        <button class="btn btn-primary" style="flex:1" onclick="confirmarSalida()">✓ Cobrar y Liberar</button>
-      </div>
-      <div style="margin-top:6px">
-        <button class="btn btn-ghost" onclick="sBack2()">← Atrás</button>
-      </div>
-    </div>
-
-    <!-- STEP 4: Éxito -->
-    <div class="step" id="sStep4">
-      <div class="confirm-box" style="margin-top:8px">
-        <div class="confirm-icon">✅</div>
-        <div class="confirm-title">Pago Registrado</div>
-        <div class="confirm-sub" id="salidaSuccessMsg">El módulo fue liberado y la transacción guardada.</div>
-      </div>
-      <div class="modal-actions" style="margin-top:18px">
-        <button class="btn btn-secondary btn-full" onclick="closeO('salidaOverlay')">Cerrar</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-
-<!-- ════════════════════════════════════════
-     MODAL: AGREGAR MÓDULO
-════════════════════════════════════════ -->
-<div class="overlay" id="addOverlay">
-  <div class="modal">
+<!-- Modal de Asignación de Vehículo -->
+<div class="modal" id="asignarModal">
+  <div class="modal-content">
     <div class="modal-header">
-      <div class="modal-title">Nuevo Módulo</div>
-      <div class="modal-sub">Configura el nuevo espacio de parqueo</div>
+      <h3>Asignar Vehículo a Módulo</h3>
+      <button class="modal-close" onclick="closeAsignarModal()">&times;</button>
     </div>
-    <div class="form-group">
-      <label class="form-label">Identificador</label>
-      <input class="form-input" id="newId" placeholder="Ej: F-01">
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Módulo a asignar:</label>
+        <div class="modulo-info" id="moduloInfo">
+          <span class="modulo-id">M--</span>
+          <span class="modulo-ubicacion">--</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="placaInput">Placa del Vehículo <span style="color:var(--gold)">*</span></label>
+        <input type="text" id="placaInput" placeholder="Ej: ABC123" maxlength="10" style="text-transform:uppercase;">
+        <div id="placaFeedback" style="font-size:12px;margin-top:5px;color:var(--text-muted)"></div>
+      </div>
+      <div class="form-group">
+        <label for="tipoServicio">Tipo de Servicio <span style="color:var(--gold)">*</span></label>
+        <select id="tipoServicio" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-1);color:var(--text-primary);font-size:14px;">
+          <option value="">Cargando tipos de servicio...</option>
+        </select>
+      </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Tipo permitido</label>
-      <select class="form-select" id="newType">
-        <option value="🚗">🚗 Automóvil</option>
-        <option value="🏍️">🏍️ Motocicleta</option>
-        <option value="🚛">🚛 Camión</option>
-        <option value="🚌">🚌 Bus</option>
-      </select>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeAsignarModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btnConfirmarAsignacion" onclick="confirmarAsignacion()">Asignar Vehículo</button>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeO('addOverlay')">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1" onclick="addModule()">Agregar Módulo</button>
+  </div>
+</div>
+
+<!-- Modal de Liberación de Módulo -->
+<div class="modal" id="liberarModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Liberar Módulo</h3>
+      <button class="modal-close" onclick="closeLiberarModal()">&times;</button>
     </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Módulo a liberar:</label>
+        <div class="modulo-info" id="liberarModuloInfo">
+          <span class="modulo-id">M--</span>
+          <span class="modulo-ubicacion">--</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Vehículo estacionado:</label>
+        <div class="vehiculo-info" id="liberarVehiculoInfo">
+          <span class="vehiculo-placa">--</span>
+          <span class="vehiculo-tiempo">--</span>
+        </div>
+      </div>
+      <div class="alert alert-warning">
+        <strong>⚠️ Atención:</strong> Al liberar este módulo, el vehículo podrá salir del parqueadero.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeLiberarModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarLiberacion()">Liberar Módulo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Menú Contextual para Módulos -->
+<div class="context-menu" id="contextMenu">
+  <div class="context-item" id="ctxItemEstado" onclick="toggleModuloEstado()">
+    <span>[MTTO]</span> Poner en Mantenimiento
+  </div>
+  <div class="context-divider"></div>
+  <div class="context-item" onclick="editModuloInfo()">
+    <span>[EDIT]</span> Editar Información
+  </div>
+  <div class="context-item" onclick="deleteModuloInfo()">
+    <span>[DEL]</span> Eliminar Módulo
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-  /* ─── Tarifas por tipo ─── */
-  const TARIFAS = {
-    '🚗': { label:'Automóvil', valor:3000 },
-    '🏍️': { label:'Motocicleta', valor:2000 },
-    '🚛': { label:'Camión', valor:6000 },
-    '🚌': { label:'Bus', valor:5000 },
-  };
-
   /* ─── Estado de módulos ─── */
-  let modules = [
-    {id:'A-01',t:'🚗',s:'ocupado',p:'PLT-456',owner:'Carlos Ruiz',entrada:'08:30',tarifa:3000},
-    {id:'A-02',t:'🚗',s:'libre'},
-    {id:'A-03',t:'🚗',s:'ocupado',p:'ABC-123',owner:'Juan Pérez',entrada:'09:14',tarifa:3000},
-    {id:'A-04',t:'🚗',s:'libre'},
-    {id:'B-01',t:'🏍️',s:'libre'},
-    {id:'B-02',t:'🏍️',s:'ocupado',p:'MOT-001',owner:'Laura Soto',entrada:'07:55',tarifa:2000},
-    {id:'B-03',t:'🏍️',s:'libre'},
-    {id:'B-04',t:'🏍️',s:'libre'},
-    {id:'C-01',t:'🚗',s:'libre'},
-    {id:'C-02',t:'🚗',s:'ocupado',p:'GHI-654',owner:'Pedro Gómez',entrada:'10:00',tarifa:3000},
-    {id:'C-03',t:'🚗',s:'libre'},
-    {id:'C-04',t:'🚗',s:'libre'},
-    {id:'D-01',t:'🚛',s:'libre'},
-    {id:'D-02',t:'🚛',s:'libre'},
-    {id:'E-01',t:'🚌',s:'libre'},
-    {id:'E-02',t:'🚌',s:'libre'},
-  ];
+  let modules = [];
+  let currentModuloIndex = -1;
+  let currentModuloAsignar = null; // Para asignación de vehículos
+  let currentModuloLiberar = null; // Para liberación de vehículos
 
-  let currentIdx = -1;
-  let selectedSPM = 'efectivo';
-  let salidaData = {};
+  // Cargar módulos desde la BD
+  async function cargarModulos() {
+    try {
+      const response = await fetch('../../controllers/moduloapi.php?action=getAll');
+      const result = await response.json();
+      if (result.success) {
+        modules = result.data.map(m => ({
+          db_id:      m.id,
+          id:         m.id.toString().padStart(2, '0'),
+          estado:     m.estado,        // DISPONIBLE | OCUPADO | MANTENIMIENTO
+          ocupaciones:m.ocupaciones,
+          ubicacion:  m.ubicacion,
+          placa:      m.placa || null  // Placa del vehículo si está OCUPADO
+        }));
+        renderLot();
+        cargarStats();
+      } else {
+        console.error('Error al cargar módulos:', result.message);
+        toast('[ERROR] No se pudieron cargar los módulos');
+      }
+    } catch (error) {
+      console.error('Error cargando módulos:', error);
+      toast('[ERROR] Error de conexión al cargar módulos');
+    }
+  }
+
+  // Cargar estadísticas
+  async function cargarStats() {
+    try {
+      const response = await fetch('../../controllers/moduloapi.php?action=getStats');
+      const result = await response.json();
+      if (result.success) {
+        const stats = result.data;
+        
+        // Actualizar las nuevas tarjetas
+        const totalEl = document.getElementById('st-total');
+        const disponiblesEl = document.getElementById('st-disponibles');
+        const ocupadosEl = document.getElementById('st-ocupados');
+        const mantenimientoEl = document.getElementById('st-mantenimiento');
+        
+        if (totalEl) totalEl.textContent = stats.total;
+        if (disponiblesEl) disponiblesEl.textContent = stats.disponibles;
+        if (ocupadosEl) ocupadosEl.textContent = stats.ocupados;
+        if (mantenimientoEl) mantenimientoEl.textContent = stats.mantenimiento;
+        
+        // Actualizar también las estadísticas antiguas para compatibilidad
+        const freeEl = document.getElementById('st-free');
+        const busyEl = document.getElementById('st-busy');
+        
+        if (freeEl) freeEl.textContent = stats.libres;
+        if (busyEl) busyEl.textContent = stats.ocupados;
+        
+        console.log('📊 Estadísticas actualizadas:', stats);
+      }
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error);
+    }
+  }
 
   /* ─── Render ─── */
   function renderLot(){
     const g = document.getElementById('lotGrid');
     g.innerHTML = '';
-    modules.forEach((m,i) => {
+    
+    modules.forEach((m, i) => {
       const d = document.createElement('div');
-      d.className = `module ${m.s}`;
-      d.innerHTML = `<div class="mod-icon">${m.t}</div>
-        <div class="mod-id">${m.id}</div>
-        ${m.p ? `<div class="mod-plate">${m.p}</div>` : ''}`;
-      d.onclick = () => openMod(i);
+
+      // El estado viene directamente de la BD (ya corregido por el backend)
+      // DISPONIBLE → verde/libre | OCUPADO → rojo | MANTENIMIENTO → amarillo
+      let cssClass;
+      switch (m.estado) {
+        case 'OCUPADO':       cssClass = 'ocupado';       break;
+        case 'MANTENIMIENTO': cssClass = 'mantenimiento'; break;
+        default:              cssClass = 'libre';          break; // DISPONIBLE
+      }
+
+      // Icono según estado
+      const icon = m.estado === 'OCUPADO' ? '🚗' : m.estado === 'MANTENIMIENTO' ? '🔧' : '🅿️';
+
+      d.className = `module ${cssClass}`;
+      d.innerHTML = `
+        <div class="mod-icon">${icon}</div>
+        <div class="mod-id">M${m.id}</div>
+        ${m.placa ? `<div class="mod-plate">${m.placa}</div>` : ''}
+      `;
+
+      // Comportamiento del clic según estado real
+      if (m.estado === 'DISPONIBLE') {
+        d.title = `Módulo ${m.id} — Disponible. Clic para asignar vehículo.`;
+        d.onclick = () => openAsignarModal(i);
+      } else if (m.estado === 'OCUPADO') {
+        d.title = `Módulo ${m.id} — Ocupado por ${m.placa || 'vehículo'}. Clic para liberar.`;
+        d.onclick = () => openLiberarModal(i);
+      } else {
+        d.title = `Módulo ${m.id} — En mantenimiento.`;
+        d.onclick = () => toast(`ℹ️ Módulo ${m.id} está en mantenimiento`);
+      }
+
+      d.oncontextmenu = (e) => {
+        e.preventDefault();
+        showModMenu(e, i);
+      };
       g.appendChild(d);
     });
+
+    // Celda para agregar nuevo módulo
     const add = document.createElement('div');
     add.className = 'module nuevo';
     add.innerHTML = '<div style="font-size:20px">+</div><div class="mod-id">NUEVO</div>';
+    add.title = 'Agregar nuevo módulo';
     add.onclick = openAdd;
     g.appendChild(add);
-    syncStats();
   }
 
-  function syncStats(){
-    const total = modules.length;
-    const busy  = modules.filter(m => m.s === 'ocupado').length;
-    document.getElementById('st-total').textContent = total;
-    document.getElementById('st-free').textContent  = total - busy;
-    document.getElementById('st-busy').textContent  = busy;
+  /* ─── Modal de Asignación ─── */
+  function openAsignarModal(i) {
+    currentModuloAsignar = modules[i];
+    const modal = document.getElementById('asignarModal');
+    const moduloInfo = document.getElementById('moduloInfo');
+    
+    // Mostrar información del módulo
+    moduloInfo.innerHTML = `
+      <span class="modulo-id">${currentModuloAsignar.id}</span>
+      <span class="modulo-ubicacion">${currentModuloAsignar.ubicacion}</span>
+    `;
+    
+    // Limpiar input de placa y feedback
+    document.getElementById('placaInput').value = '';
+    document.getElementById('placaFeedback').textContent = '';
+    document.getElementById('placaFeedback').style.color = 'var(--text-muted)';
+    
+    // Mostrar modal
+    modal.classList.add('show');
+    
+    // Cargar tipos de servicio
+    cargarTiposServicio();
+    
+    // Enfocar input de placa
+    setTimeout(() => {
+      document.getElementById('placaInput').focus();
+    }, 100);
+    
+    // Validación en tiempo real de la placa
+    const placaInput = document.getElementById('placaInput');
+    placaInput.oninput = debounce(async function() {
+      const placa = this.value.trim().toUpperCase();
+      const feedback = document.getElementById('placaFeedback');
+      if (placa.length < 3) {
+        feedback.textContent = '';
+        return;
+      }
+      try {
+        const res = await fetch(`../../controllers/vehiculosapi.php?action=getById&placa=${encodeURIComponent(placa)}`);
+        const data = await res.json();
+        if (data.success) {
+          const v = data.data;
+          feedback.textContent = `✅ ${v.marca || ''} ${v.modelo || ''} — ${v.nombre_cliente || 'Sin cliente'}`;
+          feedback.style.color = '#4caf50';
+        } else {
+          feedback.textContent = '⚠️ Placa no registrada. Regístrela en el módulo Vehículos.';
+          feedback.style.color = '#f59e0b';
+        }
+      } catch(e) {
+        feedback.textContent = '';
+      }
+    }, 400);
+  }
+  
+  function closeAsignarModal() {
+    document.getElementById('asignarModal').classList.remove('show');
+    document.getElementById('placaInput').oninput = null;
+    document.getElementById('placaFeedback').textContent = '';
+    currentModuloAsignar = null;
   }
 
-  /* ─── Abrir modal según estado ─── */
-  function openMod(i){
-    currentIdx = i;
+  // Cargar tipos de servicio
+  async function cargarTiposServicio() {
+    try {
+      const response = await fetch('../../controllers/tiposervicioapi.php?action=getAll');
+      const result = await response.json();
+      
+      const select = document.getElementById('tipoServicio');
+      
+      if (result.success && result.data.length > 0) {
+        select.innerHTML = '';
+        result.data.forEach(tipo => {
+          const option = document.createElement('option');
+          option.value = tipo.id_tipo_servicio;
+          option.textContent = tipo.nombre_tipo_servicio;
+          select.appendChild(option);
+        });
+      } else {
+        // Si no hay tipos de servicio o hay error, usar valor por defecto
+        select.innerHTML = '<option value="1">Servicio Estándar</option>';
+      }
+    } catch (error) {
+      console.error('Error cargando tipos de servicio:', error);
+      // Valor por defecto en caso de error
+      const select = document.getElementById('tipoServicio');
+      select.innerHTML = '<option value="1">Servicio Estándar</option>';
+    }
+  }
+
+  /* ─── Modal de Liberación ─── */
+  function openLiberarModal(i) {
+    const modulo = modules[i];
+    const modal = document.getElementById('liberarModal');
+    const moduloInfo = document.getElementById('liberarModuloInfo');
+    const vehiculoInfo = document.getElementById('liberarVehiculoInfo');
+
+    // Mostrar información del módulo
+    moduloInfo.innerHTML = `
+      <span class="modulo-id">M${modulo.id}</span>
+      <span class="modulo-ubicacion">${modulo.ubicacion}</span>
+    `;
+
+    // Mostrar placa mientras carga el tiempo
+    vehiculoInfo.innerHTML = `
+      <span class="vehiculo-placa">${modulo.placa || 'SIN PLACA'}</span>
+      <span class="vehiculo-tiempo" id="tiempoEstancia">Calculando tiempo...</span>
+    `;
+
+    // Guardar referencia al módulo
+    currentModuloLiberar = modulo;
+
+    // Mostrar modal
+    modal.classList.add('show');
+
+    // Cargar tiempo de estancia desde la entrada activa
+    if (modulo.placa) {
+      fetch(`../../controllers/entradaapi.php?action=getActive`)
+        .then(r => r.json())
+        .then(result => {
+          if (result.success) {
+            const entrada = result.data.find(e =>
+              parseInt(e.id_modulo) === parseInt(modulo.db_id)
+            );
+            if (entrada) {
+              const desde = new Date(entrada.fecha_hora_entrada);
+              const ahora = new Date();
+              const diffMs = ahora - desde;
+              const diffH  = Math.floor(diffMs / 3600000);
+              const diffM  = Math.floor((diffMs % 3600000) / 60000);
+              const tiempoEl = document.getElementById('tiempoEstancia');
+              if (tiempoEl) {
+                tiempoEl.textContent = diffH > 0
+                  ? `Hace ${diffH}h ${diffM}min`
+                  : `Hace ${diffM} minutos`;
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }
+  
+  function closeLiberarModal() {
+    document.getElementById('liberarModal').classList.remove('show');
+    currentModuloLiberar = null;
+  }
+  
+  // Ir a pagos (misma pestaña, la factura ya quedó en BD como PENDIENTE)
+  function abrirPagosConFactura(factura) {
+    sessionStorage.setItem('facturaPrecargada', JSON.stringify(factura));
+    window.location.href = 'pagos.php';
+  }
+
+  async function confirmarLiberacion() {
+    if (!currentModuloLiberar) return;
+
+    const btnLiberar = document.querySelector('#liberarModal .btn-danger');
+    if (btnLiberar) { btnLiberar.disabled = true; btnLiberar.textContent = 'Liberando…'; }
+
+    try {
+      // Obtener la entrada activa para este módulo
+      const response = await fetch('../../controllers/entradaapi.php?action=getActive');
+      const result   = await response.json();
+
+      if (!result.success) {
+        toast('❌ Error al obtener entradas activas');
+        return;
+      }
+
+      const entrada = result.data.find(e =>
+        parseInt(e.id_modulo) === parseInt(currentModuloLiberar.db_id)
+      );
+
+      if (!entrada) {
+        toast('❌ No se encontró la entrada activa para este módulo');
+        return;
+      }
+
+      // Registrar salida
+      const liberarResponse = await fetch('../../controllers/salidaapi.php', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'release', id_entrada: entrada.id_entrada })
+      });
+      const liberarResult = await liberarResponse.json();
+
+      if (liberarResult.success) {
+        closeLiberarModal();
+        cargarModulos();
+
+        if (liberarResult.factura) {
+          const f   = liberarResult.factura;
+          const fmt = n => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n);
+          mostrarNotificacionFactura(f, fmt);
+        } else {
+          toast(`✅ Módulo ${currentModuloLiberar.id} liberado correctamente`);
+        }
+      } else {
+        toast(`❌ ${liberarResult.message}`);
+      }
+    } catch (error) {
+      console.error('Error en liberación:', error);
+      toast('❌ Error de conexión');
+    } finally {
+      if (btnLiberar) { btnLiberar.disabled = false; btnLiberar.textContent = 'Liberar Módulo'; }
+    }
+  }
+
+  // Notificación de factura generada (reemplaza el confirm() nativo)
+  function mostrarNotificacionFactura(f, fmt) {
+    // Crear modal de notificación
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:transparent;z-index:3000;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s';
+    overlay.innerHTML = `
+      <div style="background:var(--surface-2);border:1px solid var(--border-md);border-radius:16px;padding:28px;max-width:400px;width:90%;position:relative">
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:36px">🧾</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text-primary);margin:6px 0">Factura Generada</div>
+          <div style="font-size:13px;color:var(--text-secondary)">El módulo fue liberado correctamente</div>
+        </div>
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px">
+            <span style="color:var(--text-muted)">Placa</span>
+            <strong style="font-family:monospace">${f.placa}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px">
+            <span style="color:var(--text-muted)">Servicio</span>
+            <span>${f.tipo_servicio || '—'}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px">
+            <span style="color:var(--text-muted)">Tiempo</span>
+            <span>${f.tiempo_estancia}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px">
+            <span style="color:var(--text-muted)">Horas cobradas</span>
+            <span>${f.horas_cobradas} h × ${fmt(f.tarifa_hora)}</span>
+          </div>
+          <div style="border-top:1px dashed var(--border-md);margin:8px 0"></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:16px;font-weight:800">
+            <span style="color:var(--text-muted)">TOTAL</span>
+            <span style="color:var(--gold)">${fmt(f.monto_total)}</span>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:14px">
+          La factura quedó <strong style="color:#f59e0b">PENDIENTE</strong>. Puedes cobrarla ahora o después desde el módulo de Pagos.
+        </p>
+        <div style="display:flex;gap:10px">
+          <button onclick="this.closest('[style*=fixed]').remove()" 
+            style="flex:1;padding:11px;background:var(--surface-3);border:1px solid var(--border-md);border-radius:10px;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer">
+            Quedar aquí
+          </button>
+          <button onclick="abrirPagosConFactura(${JSON.stringify(f).replace(/"/g,'&quot;')})"
+            style="flex:1;padding:11px;background:var(--gold);border:none;border-radius:10px;color:#08090c;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer">
+            Ir a Pagos 💳
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  
+  async function confirmarAsignacion() {
+    if (!currentModuloAsignar) return;
+    
+    const placa = document.getElementById('placaInput').value.trim().toUpperCase();
+    const idTipoServicio = document.getElementById('tipoServicio').value;
+    const btn = document.getElementById('btnConfirmarAsignacion');
+    
+    if (!placa) {
+      toast('[ERROR] Debe ingresar una placa');
+      return;
+    }
+    
+    if (!idTipoServicio) {
+      toast('[ERROR] Debe seleccionar un tipo de servicio');
+      return;
+    }
+    
+    // Deshabilitar botón para evitar doble envío
+    btn.disabled = true;
+    btn.textContent = 'Asignando...';
+    
+    try {
+      // Verificar que la placa esté registrada en el sistema
+      const checkResponse = await fetch(`../../controllers/vehiculosapi.php?action=getById&placa=${encodeURIComponent(placa)}`);
+      const checkResult = await checkResponse.json();
+      
+      if (!checkResult.success) {
+        toast('[ERROR] La placa no está registrada. Regístrela primero en Vehículos.');
+        btn.disabled = false;
+        btn.textContent = 'Asignar Vehículo';
+        return;
+      }
+      
+      // Asignar vehículo al módulo (registrar entrada)
+      const asignarResponse = await fetch('../../controllers/entradaapi.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'assign',
+          id_modulo: currentModuloAsignar.db_id,
+          placa: placa,
+          id_tipo_servicio: parseInt(idTipoServicio)
+        })
+      });
+      
+      const asignarResult = await asignarResponse.json();
+      
+      if (asignarResult.success) {
+        toast(`✅ Vehículo ${placa} asignado al módulo ${currentModuloAsignar.id}`);
+        closeAsignarModal();
+        cargarModulos();
+      } else {
+        toast(`[ERROR] ${asignarResult.message}`);
+      }
+    } catch (error) {
+      console.error('Error en asignación:', error);
+      toast('[ERROR] Error de conexión al servidor');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Asignar Vehículo';
+    }
+  }
+
+  /* ─── Menú Contextual ─── */
+  function showModMenu(e, i) {
+    currentModuloIndex = i;
+    const menu = document.getElementById('contextMenu');
     const m = modules[i];
-    if(m.s === 'libre'){
-      openEntrada(i);
+    
+    // Actualizar opciones según el estado actual
+    const items = menu.querySelectorAll('.context-item');
+    items.forEach(item => {
+      item.classList.remove('disabled');
+    });
+    
+    // Actualizar texto del botón según estado
+    const ctxItemEstado = document.getElementById('ctxItemEstado');
+    if (m.estado === 'MANTENIMIENTO') {
+      ctxItemEstado.innerHTML = '<span>[DISP]</span> Poner Disponible';
     } else {
-      openSalida(i);
+      ctxItemEstado.innerHTML = '<span>[MTTO]</span> Poner en Mantenimiento';
+    }
+    
+    // Deshabilitar opciones según el estado actual
+    // Si está ocupado, no puede ponerse en mantenimiento
+    if (m.ocupaciones > 0 && m.estado !== 'MANTENIMIENTO') {
+      items[0].classList.add('disabled'); // No puede poner en mantenimiento si está ocupado
+    }
+    
+    // Posicionar menú
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+    menu.classList.add('show');
+    
+    // Cerrar al hacer clic fuera
+    setTimeout(() => {
+      document.addEventListener('click', hideModMenu);
+    }, 100);
+  }
+
+  function hideModMenu() {
+    document.getElementById('contextMenu').classList.remove('show');
+    document.removeEventListener('click', hideModMenu);
+  }
+
+  async function toggleModuloEstado() {
+    if (currentModuloIndex === -1) return;
+    
+    const m = modules[currentModuloIndex];
+    
+    // Determinar el nuevo estado según el estado actual
+    const nuevoEstado = m.estado === 'MANTENIMIENTO' ? 'DISPONIBLE' : 'MANTENIMIENTO';
+    const mensajeConfirmacion = nuevoEstado === 'MANTENIMIENTO' 
+      ? `¿Poner el módulo ${m.id} en Mantenimiento?`
+      : `¿Poner el módulo ${m.id} Disponible?`;
+    const mensajeExito = nuevoEstado === 'MANTENIMIENTO'
+      ? `[OK] Módulo ${m.id} puesto en Mantenimiento`
+      : `[OK] Módulo ${m.id} puesto Disponible`;
+    
+    // Validaciones
+    if (nuevoEstado === 'MANTENIMIENTO' && m.ocupaciones > 0) {
+      toast('[ERROR] No se puede poner en mantenimiento un módulo ocupado');
+      hideModMenu();
+      return;
+    }
+    
+    // Confirmación
+    if (!confirm(mensajeConfirmacion)) {
+      hideModMenu();
+      return;
+    }
+    
+    try {
+      const response = await fetch('../../controllers/moduloapi.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'changeState',
+          id: m.db_id,
+          estado: nuevoEstado
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        hideModMenu();
+        cargarModulos(); // Recargar para actualizar la vista
+        toast(mensajeExito);
+      } else {
+        toast(`[ERROR] Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error cambiando estado:', error);
+      toast('[ERROR] Error de conexión');
+    }
+    
+    hideModMenu();
+  }
+
+  async function editModuloInfo() {
+    if (currentModuloIndex === -1) return;
+    const m = modules[currentModuloIndex];
+    const nuevaUbicacion = prompt(`Editar ubicación del módulo ${m.id}:`, m.ubicacion);
+    if (!nuevaUbicacion || nuevaUbicacion === m.ubicacion) {
+      hideModMenu();
+      return;
+    }
+    
+    try {
+      const response = await fetch('../../controllers/moduloapi.php', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          id: m.db_id,
+          ubicacion: nuevaUbicacion,
+          estado: m.estado
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        hideModMenu();
+        cargarModulos(); // Recargar para actualizar la vista
+        toast(`[OK] Módulo ${m.id} actualizado`);
+      } else {
+        toast(`[ERROR] Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error editando módulo:', error);
+      toast('[ERROR] Error de conexión');
+    }
+    
+    hideModMenu();
+  }
+
+  async function deleteModuloInfo() {
+    if (currentModuloIndex === -1) return;
+    const m = modules[currentModuloIndex];
+    
+    // Verificar si el módulo tiene ocupaciones activas
+    if (m.ocupaciones > 0) {
+      toast('[ERROR] No se puede eliminar un módulo ocupado');
+      hideModMenu();
+      return;
+    }
+    
+    if (!confirm(`¿Estás seguro de eliminar el módulo ${m.id} (${m.ubicacion})?`)) {
+      hideModMenu();
+      return;
+    }
+    
+    try {
+      const response = await fetch(`../../controllers/moduloapi.php?id=${m.db_id}`, {
+        method: 'DELETE'
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        hideModMenu();
+        cargarModulos(); // Recargar para actualizar la vista
+        toast(`[OK] Módulo ${m.id} eliminado`);
+      } else {
+        toast(`[ERROR] Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error eliminando módulo:', error);
+      toast('[ERROR] Error de conexión');
+    }
+    
+    hideModMenu();
+  }
+
+  function openMod(i) {
+    const m = modules[i];
+    if (m.estado === 'DISPONIBLE') {
+      toast(`ℹ️ Módulo ${m.id} está disponible`);
+    } else if (m.estado === 'OCUPADO') {
+      toast(`ℹ️ Módulo ${m.id} está ocupado por ${m.placa || 'un vehículo'}`);
+    } else {
+      toast(`ℹ️ Módulo ${m.id} está en mantenimiento`);
     }
   }
 
-  /* ══════════════════════════════════════
-     FLUJO ENTRADA
-  ══════════════════════════════════════ */
-  function openEntrada(i){
-    const m = modules[i];
-    resetEntradaSteps();
-    document.getElementById('eTitle').textContent    = `Registrar Entrada — Módulo ${m.id}`;
-    document.getElementById('eSubtitle').textContent = `Tipo: ${m.t}  ·  Disponible`;
-    document.getElementById('ePlaca').value   = '';
-    document.getElementById('eOwner').value   = '';
-    document.getElementById('eErr1').style.display = 'none';
-
-    /* Pre-seleccionar tipo de vehículo según módulo */
-    const selTipo  = document.getElementById('eTipoVeh');
-    const selTarif = document.getElementById('eTarifa');
-    selTipo.value  = m.t;
-    /* Set tarifa matching */
-    for(let opt of selTarif.options){
-      if(opt.value == TARIFAS[m.t].valor){ selTarif.value = opt.value; break; }
+  async function openAdd() {
+    const nuevaUbicacion = prompt('Ingrese la ubicación del nuevo módulo (ej: Piso 4 - Sector A):');
+    if (!nuevaUbicacion) return;
+    
+    try {
+      const response = await fetch('../../controllers/moduloapi.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          ubicacion: nuevaUbicacion,
+          estado: 'DISPONIBLE'
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        cargarModulos(); // Recargar para actualizar la vista
+        toast(`[OK] Nuevo módulo agregado`);
+      } else {
+        toast(`[ERROR] Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error agregando módulo:', error);
+      toast('[ERROR] Error de conexión');
     }
-
-    const now = new Date();
-    document.getElementById('eHoraEntrada').value = now.toTimeString().slice(0,5);
-
-    document.getElementById('entradaOverlay').classList.add('open');
-  }
-
-  function resetEntradaSteps(){
-    ['eStep1','eStep2','eStep3','eStep4'].forEach((id,k) => {
-      const el = document.getElementById(id);
-      el.classList.remove('active');
-      if(k===0) el.classList.add('active');
-    });
-    setSB(['sb1','sb2','sb3'], 'active', 0);
-  }
-
-  function eNext1(){
-    const placa = document.getElementById('ePlaca').value.trim().toUpperCase();
-    const err   = document.getElementById('eErr1');
-    if(!placa){ err.textContent='Ingresa la placa del vehículo.'; err.style.display='flex'; return; }
-    err.style.display='none';
-    document.getElementById('ePlaca').value = placa;
-    showEStep(2);
-  }
-
-  function eBack1(){ showEStep(1); }
-
-  function eNext2(){
-    const hora = document.getElementById('eHoraEntrada').value;
-    const err  = document.getElementById('eErr2');
-    if(!hora){ err.textContent='Ingresa la hora de entrada.'; err.style.display='flex'; return; }
-    err.style.display='none';
-
-    const placa  = document.getElementById('ePlaca').value.trim().toUpperCase();
-    const owner  = document.getElementById('eOwner').value.trim() || 'No registrado';
-    const tipo   = document.getElementById('eTipoVeh').value;
-    const tarifa = parseInt(document.getElementById('eTarifa').value);
-    const m      = modules[currentIdx];
-
-    document.getElementById('confModulo').textContent  = m.id;
-    document.getElementById('confPlaca').textContent   = placa;
-    document.getElementById('confOwner').textContent   = owner;
-    document.getElementById('confTipo').textContent    = tipo + ' ' + TARIFAS[tipo].label;
-    document.getElementById('confTarifa').textContent  = `$${tarifa.toLocaleString('es-CO')}/hora`;
-    document.getElementById('confHora').textContent    = hora;
-    showEStep(3);
-  }
-
-  function eBack2(){ showEStep(2); }
-
-  function confirmarEntrada(){
-    const m      = modules[currentIdx];
-    const placa  = document.getElementById('ePlaca').value.trim().toUpperCase();
-    const owner  = document.getElementById('eOwner').value.trim() || 'No registrado';
-    const tipo   = document.getElementById('eTipoVeh').value;
-    const tarifa = parseInt(document.getElementById('eTarifa').value);
-    const hora   = document.getElementById('eHoraEntrada').value;
-
-    modules[currentIdx] = { ...m, s:'ocupado', p:placa, owner, t:tipo, entrada:hora, tarifa };
-    renderLot();
-    document.getElementById('confSuccessMsg').textContent =
-      `${placa} asignado al módulo ${m.id} desde las ${hora}.`;
-    showEStep(4);
-    toast(`✓ Entrada registrada · ${placa} → Módulo ${m.id}`);
-  }
-
-  function showEStep(n){
-    ['eStep1','eStep2','eStep3','eStep4'].forEach((id,k) => {
-      document.getElementById(id).classList.toggle('active', k===n-1);
-    });
-    const sbMap = {1:0, 2:1, 3:2, 4:3};
-    setSB(['sb1','sb2','sb3'], 'active', sbMap[n]);
-    if(n > 1) document.getElementById('sb1').classList.add('done');
-    if(n > 2) document.getElementById('sb2').classList.add('done');
-    if(n > 3) document.getElementById('sb3').classList.add('done');
-  }
-
-  /* ══════════════════════════════════════
-     FLUJO SALIDA
-  ══════════════════════════════════════ */
-  function openSalida(i){
-    const m = modules[i];
-    resetSalidaSteps();
-    selectedSPM = 'efectivo';
-    ['sp-efectivo','sp-transferencia','sp-tarjeta','sp-datafono'].forEach(id =>
-      document.getElementById(id).classList.toggle('selected', id==='sp-efectivo'));
-
-    document.getElementById('sTitle').textContent    = `Registrar Salida — Módulo ${m.id}`;
-    document.getElementById('sSubtitle').textContent = `Vehículo: ${m.p}  ·  Entrada: ${m.entrada||'—'}`;
-
-    const now = new Date();
-    document.getElementById('sHoraSalida').value = now.toTimeString().slice(0,5);
-
-    /* Llenar ticket */
-    document.getElementById('sModulo').textContent  = m.id;
-    document.getElementById('sPlaca').textContent   = m.p;
-    document.getElementById('sOwner').textContent   = m.owner || 'No registrado';
-    document.getElementById('sEntrada').textContent = m.entrada || '—';
-
-    calcularSalida();
-    document.getElementById('sHoraSalida').addEventListener('change', calcularSalida);
-    document.getElementById('salidaOverlay').classList.add('open');
-  }
-
-  function calcularSalida(){
-    const m       = modules[currentIdx];
-    const entrada = m.entrada || '00:00';
-    const salida  = document.getElementById('sHoraSalida').value || entrada;
-    const tarifa  = m.tarifa || 3000;
-
-    const [hE,mE] = entrada.split(':').map(Number);
-    const [hS,mS] = salida.split(':').map(Number);
-    let minutos = (hS*60+mS) - (hE*60+mE);
-    if(minutos < 0) minutos += 24*60;
-    if(minutos === 0) minutos = 60; /* mínimo 1 hora */
-
-    const horas    = minutos / 60;
-    const total    = Math.ceil(horas) * tarifa;
-    const durLabel = `${Math.floor(minutos/60)}h ${String(minutos%60).padStart(2,'0')}m`;
-
-    document.getElementById('sSalida').textContent      = salida;
-    document.getElementById('sDuracion').textContent    = durLabel;
-    document.getElementById('sTarifaLabel').textContent = `$${tarifa.toLocaleString('es-CO')}/hora`;
-    document.getElementById('sTotal').textContent       = `$${total.toLocaleString('es-CO')}`;
-    document.getElementById('sTotal2').textContent      = `$${total.toLocaleString('es-CO')}`;
-
-    salidaData = { modulo:m.id, placa:m.p, durLabel, total, tarifa, salida };
-  }
-
-  function sNext1(){
-    const salida = document.getElementById('sHoraSalida').value;
-    const err    = document.getElementById('sErr1');
-    if(!salida){ err.textContent='Ingresa la hora de salida.'; err.style.display='flex'; return; }
-    err.style.display='none';
-    calcularSalida();
-    showSStep(2);
-  }
-
-  function sBack1(){ showSStep(1); }
-
-  function selectSPM(pm){
-    selectedSPM = pm;
-    ['sp-efectivo','sp-transferencia','sp-tarjeta','sp-datafono'].forEach(id =>
-      document.getElementById(id).classList.toggle('selected', id===`sp-${pm}`));
-  }
-
-  function sNext2(){
-    document.getElementById('sConfModulo').textContent  = salidaData.modulo;
-    document.getElementById('sConfPlaca').textContent   = salidaData.placa;
-    document.getElementById('sConfDur').textContent     = salidaData.durLabel;
-    document.getElementById('sConfTotal').textContent   = `$${salidaData.total.toLocaleString('es-CO')}`;
-    document.getElementById('sConfMetodo').textContent  = selectedSPM.charAt(0).toUpperCase() + selectedSPM.slice(1);
-    showSStep(3);
-  }
-
-  function sBack2(){ showSStep(2); }
-
-  function confirmarSalida(){
-    const m = modules[currentIdx];
-    document.getElementById('salidaSuccessMsg').textContent =
-      `Módulo ${m.id} liberado · $${salidaData.total.toLocaleString('es-CO')} cobrado via ${selectedSPM}.`;
-
-    modules[currentIdx] = { id:m.id, t:m.t, s:'libre' };
-    renderLot();
-    showSStep(4);
-    toast(`✓ Salida registrada · ${salidaData.placa} · $${salidaData.total.toLocaleString('es-CO')}`);
-  }
-
-  function resetSalidaSteps(){
-    ['sStep1','sStep2','sStep3','sStep4'].forEach((id,k) => {
-      const el = document.getElementById(id);
-      el.classList.remove('active');
-      if(k===0) el.classList.add('active');
-    });
-    setSB(['ss1','ss2','ss3'], 'active', 0);
-  }
-
-  function showSStep(n){
-    ['sStep1','sStep2','sStep3','sStep4'].forEach((id,k) => {
-      document.getElementById(id).classList.toggle('active', k===n-1);
-    });
-    const sbMap = {1:0, 2:1, 3:2, 4:3};
-    setSB(['ss1','ss2','ss3'], 'active', sbMap[n]);
-    if(n > 1) document.getElementById('ss1').classList.add('done');
-    if(n > 2) document.getElementById('ss2').classList.add('done');
-    if(n > 3) document.getElementById('ss3').classList.add('done');
-  }
-
-  /* ─── Agregar módulo ─── */
-  function openAdd(){ document.getElementById('addOverlay').classList.add('open'); }
-  function addModule(){
-    const id = document.getElementById('newId').value.trim();
-    const t  = document.getElementById('newType').value;
-    if(!id) return;
-    modules.push({id, t, s:'libre'});
-    closeO('addOverlay');
-    document.getElementById('newId').value = '';
-    renderLot();
-    toast(`✓ Módulo ${id} agregado`);
-  }
-
-  /* ─── Helpers ─── */
-  function closeO(id){
-    document.getElementById(id).classList.remove('open');
-  }
-
-  function setSB(ids, cls, activeIdx){
-    ids.forEach((id,k) => {
-      document.getElementById(id).classList.remove('active','done');
-      if(k === activeIdx) document.getElementById(id).classList.add(cls);
-    });
   }
 
   function toast(msg){
@@ -730,11 +1110,46 @@
     setTimeout(() => t.classList.remove('show'), 3200);
   }
 
-  /* Cerrar overlay al click exterior */
-  document.querySelectorAll('.overlay').forEach(o =>
-    o.addEventListener('click', e => { if(e.target === o) o.classList.remove('open'); }));
+  // Utilidad debounce para validación en tiempo real
+  function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
 
-  renderLot();
+  // Cargar datos al iniciar la página
+  document.addEventListener('DOMContentLoaded', function() {
+    cargarModulos();
+  });
+</script>
+
+<script>
+  // Hamburger menu toggle
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  const navLinks = document.getElementById('nav-links');
+
+  hamburgerBtn.addEventListener('click', () => {
+    navLinks.classList.toggle('active');
+    hamburgerBtn.classList.toggle('active');
+  });
+
+  // Close menu when clicking outside or on a link
+  document.addEventListener('click', (e) => {
+    if (!hamburgerBtn.contains(e.target) && !navLinks.contains(e.target)) {
+      navLinks.classList.remove('active');
+      hamburgerBtn.classList.remove('active');
+    }
+  });
+
+  // Close menu when clicking on a nav link
+  navLinks.addEventListener('click', (e) => {
+    if (e.target.classList.contains('nb')) {
+      navLinks.classList.remove('active');
+      hamburgerBtn.classList.remove('active');
+    }
+  });
 </script>
 </body>
 </html>

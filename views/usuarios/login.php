@@ -287,13 +287,14 @@
     <div class="title-rule"></div>
     <p class="form-sub">Ingresa tus credenciales para acceder al sistema.</p>
 
-    <form action="../../controllers/controllerlogin.php" method="POST">
+    <form action="../../controllers/loginController.php" method="POST">
+    <input type="hidden" name="action" value="login">
 
       <div class="form-group">
         <label class="form-label">Rol de acceso</label>
         <select class="form-select" name="rol" id="rol">
           <option value="ADMINISTRADOR">⚙️  ADMINISTRADOR</option>
-          <option value="EMPLEADO">👤  EMPLEADO</option>
+          <option value="OPERADOR">👤  OPERADOR</option>
         </select>
       </div>
 
@@ -313,12 +314,12 @@
           <span class="i-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </span>
-          <input type="password" class="form-input" name="password" id="password" placeholder="••••••••" autocomplete="current-password">
+          <input type="password" class="form-input" name="password" id="password" placeholder="•••••••" autocomplete="current-password">
         </div>
         <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
       </div>
 
-      <button class="btn-login" type="submit">INGRESAR AL SISTEMA</button>
+      <button class="btn-login" type="submit" name="submit" value="login">INGRESAR AL SISTEMA</button>
     </form>
 
     <?php if(isset($_GET['error'])): ?>
