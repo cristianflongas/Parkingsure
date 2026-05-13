@@ -1,6 +1,6 @@
 # 📋 DOCUMENTACIÓN COMPLETA - SISTEMA PARKINGSURE
 
-## 🏗️ ARQUITECTURA GENERAL DEL SISTEMA
+## 🏗️ ARQUITECTURA MVC DEL SISTEMA
 
 ### 📁 Estructura de Directorios
 ```
@@ -11,6 +11,97 @@ PARKINGSURE/
 ├── img/                 # Imágenes y recursos estáticos
 ├── style/               # Archivos CSS
 └── requirements.txt       # Dependencias Python (reportes)
+```
+
+### 🔄 PATRÓN DE DISEÑO MVC
+
+#### 📄 **VISTAS (Views)**
+**Responsabilidad**: Interfaz de usuario y presentación de datos
+- **Ubicación**: `views/usuarios/`
+- **Tecnología**: PHP + HTML + CSS + JavaScript
+- **Funciones**:
+  - Renderizar HTML estructurado
+  - Manejar eventos del usuario (clicks, formularios)
+  - Validar datos en el frontend
+  - Comunicarse con controladores vía fetch API
+  - Actualizar UI dinámicamente
+
+**Ejemplo - `dashboard.php`**:
+```php
+// 1. Renderiza estructura HTML
+<div class="page-header">
+  <h1>Dashboard</h1>
+</div>
+
+// 2. Maneja eventos del usuario
+<button onclick="cargarEstadisticas()">Actualizar</button>
+
+// 3. Comunica con controlador
+async function cargarEstadisticas() {
+  const response = await fetch('../../controllers/dashboardapi.php?action=getStats');
+  const result = await response.json();
+  // Actualizar UI con datos recibidos
+}
+```
+
+#### 🔧 **CONTROLADORES (Controllers)**
+**Responsabilidad**: Lógica de negocio y API endpoints
+- **Ubicación**: `controllers/`
+- **Tecnología**: PHP con PDO
+- **Funciones**:
+  - Recibir peticiones HTTP (GET, POST, PUT, DELETE)
+  - Validar y sanitizar datos de entrada
+  - Ejecutar consultas SQL preparadas
+  - Gestionar transacciones de base de datos
+  - Responder en formato JSON
+
+**Ejemplo - `dashboardapi.php`**:
+```php
+// 1. Recibe petición y valida
+$action = $_GET['action'] ?? '';
+if ($action === 'getStats') {
+    // 2. Conecta a BD y ejecuta consulta
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM entrada WHERE fecha_hora_salida IS NULL");
+    $stmt->execute();
+    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // 3. Responde en formato JSON
+    echo json_encode(['success' => true, 'data' => $stats]);
+}
+```
+
+#### 🗄️ **MODELOS (Models)**
+**Responsabilidad**: Abstracción de base de datos
+- **Ubicación**: Implícito en controladores vía PDO
+- **Tecnología**: SQL con MySQL/MariaDB
+- **Funciones**:
+  - Definir estructura de tablas
+  - Relaciones entre tablas (FK, PK)
+  - Consultas SQL complejas con JOINs
+  - Integridad de datos
+
+**Ejemplo - Modelo de Vehículo**:
+```sql
+-- Tabla principal
+CREATE TABLE vehiculo (
+  placa VARCHAR(8) PRIMARY KEY,
+  id_cliente INT,
+  marca VARCHAR(30),
+  modelo VARCHAR(30),
+  anio INT,
+  color VARCHAR(20),
+  FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente)
+);
+
+-- Relación con cliente
+CREATE TABLE cliente (
+  id_cliente INT AUTO_INCREMENT PRIMARY KEY,
+  cedula_users VARCHAR(20),
+  nombre VARCHAR(80),
+  telefono VARCHAR(20),
+  correo VARCHAR(80),
+  FOREIGN KEY (cedula_users) REFERENCES users(cedula)
+);
 ```
 
 ### 🔗 Conexión a Base de Datos
@@ -24,52 +115,79 @@ PARKINGSURE/
 
 ## 🔐 MÓDULO DE AUTENTICACIÓN
 
-### 📄 Vista: `login.php`
-**Acciones Principales:**
-1. **Inicio de Sesión**: Valida credenciales contra BD
-2. **Recuperación Contraseña**: Envia correo de recuperación
-3. **Redirección Automática**: Basada en rol de usuario
-
-### 🔧 Controlador: `loginController.php`
-**Proceso de Login:**
-```php
-1. Recibe usuario y password vía POST
-2. Consulta BD con JOIN a tabla roles
-3. Verifica contraseña con password_verify()
-4. Crea variables de sesión:
-   - $_SESSION['id_usuario'] = id_personal
-   - $_SESSION['nombre'] = nombre
-   - $_SESSION['usuario'] = usuario
-   - $_SESSION['rol'] = nombre_rol
-   - $_SESSION['correo'] = correo
-5. Redirige al dashboard según rol
+### � **FLUJO COMPLETO DE AUTENTICACIÓN**
+```
+Usuario → login.php → loginController.php → Dashboard
 ```
 
-**Tablas Involucradas:**
-- `personal` (usuarios del sistema)
-- `roles` (roles de usuario: ADMINISTRADOR, OPERADOR)
+### � **Vista: `login.php`**
+**Responsabilidad**: Interfaz de autenticación
+- **Tecnología**: PHP + HTML5 + CSS
+- **Funciones**:
+  1. Formulario de login (usuario, contraseña)
+  2. Enlace de recuperación de contraseña
+  3. Validación frontend básica
+  4. Redirección automática según rol
 
-**Flujo de Validación:**
-1. Verificar campos vacíos
-2. Sanitizar inputs
-3. Consulta SQL preparada
-4. Verificar hash de contraseña
-5. Crear sesión segura
-6. Redirección basada en rol
+### 🔧 **Controlador: `loginController.php`**
+**Responsabilidad**: Lógica de autenticación
+- **Tecnología**: PHP + PDO + Session Management
+- **Proceso Completo**:
+  ```php
+  // 1. Recepción y validación
+  $usuario = $_POST['usuario'] ?? '';
+  $password = $_POST['password'] ?? '';
+  
+  // 2. Consulta a base de datos
+  $stmt = $conn->prepare(
+      "SELECT p.*, r.nombre_rol 
+       FROM personal p 
+       JOIN roles r ON p.id_rol = r.id_rol 
+       WHERE p.usuario = ?"
+  );
+  
+  // 3. Verificación de contraseña
+  if ($stmt->execute([$usuario]) {
+      $user = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (password_verify($password, $user['password_hash'])) {
+          // 4. Creación de sesión segura
+          session_regenerate_id(true);
+          $_SESSION['id_usuario'] = $user['id_personal'];
+          $_SESSION['nombre'] = $user['nombre'];
+          $_SESSION['rol'] = $user['nombre_rol'];
+          
+          // 5. Redirección basada en rol
+          header("Location: dashboard.php");
+      }
+  }
+  ```
+
+**Tablas Involucradas:**
+- `personal`: Datos de usuarios del sistema
+- `roles`: Definición de permisos y niveles de acceso
+
+**Seguridad Implementada:**
+- ✅ **Password Hashing**: bcrypt/password_hash
+- ✅ **SQL Injection**: Prepared statements
+- ✅ **Session Security**: Regeneración de ID
+- ✅ **XSS Protection**: Escape de datos en vistas
 
 ---
 
 ## 📊 MÓDULO DASHBOARD (Panel Principal)
 
 ### 📄 Vista: `dashboard.php`
-**Funcionalidades:**
-1. **Estadísticas en Tiempo Real**: Ingresos del día, vehículos activos
-2. **Tarjetas de Información**: Estado del parqueadero
-3. **Gráficos Dinámicos**: Ocupación por módulo
-4. **Accesos Rápidos**: Atajos a otros módulos
+**Responsabilidad**: Panel principal con estadísticas en tiempo real
+- **Tecnología**: PHP + JavaScript + Chart.js
+- **Funciones**:
+  - Renderizar tarjetas de información
+  - Actualizar gráficos dinámicos
+  - Mostrar estadísticas del día
+  - Refrescar datos automáticamente
 
 ### 🔧 Controlador: `dashboardapi.php`
-**Endpoints Principales:**
+**Responsabilidad**: API para estadísticas del sistema
+- **Endpoints Principales**:
 ```php
 GET dashboardapi.php?action=getStats
 - Consulta: SELECT COUNT(*) FROM entrada WHERE fecha_hora_salida IS NULL
@@ -87,6 +205,11 @@ GET dashboardapi.php?action=getOcupacion
 - Retorna: Ocupación por módulo
 ```
 
+**Flujo de Datos:**
+```
+Dashboard → dashboardapi.php → Base de Datos → Dashboard
+```
+
 **Actualización Automática:**
 - **Cada 30 segundos**: Refresca estadísticas
 - **Reinicio Diario**: A medianoche, reinicia contadores del día
@@ -95,26 +218,37 @@ GET dashboardapi.php?action=getOcupacion
 
 ## 🚗 MÓDULO PARQUEADERO
 
-### 📄 Vista: `parqueadero.php`
-**Funcionalidades:**
-1. **Registro de Entrada**: Nuevo vehículo al parqueadero
-2. **Gestión de Salidas**: Registrar salida y calcular tarifa
-3. **Vista en Tiempo Real**: Estado actual de cada módulo
-4. **Búsqueda de Vehículos**: Filtros por placa, estado
+### � **FLUJO COMPLETO DE OPERACIONES**
+```
+Usuario → parqueadero.php → parqueaderoapi.php → Base de Datos → Parqueadero
+```
 
-### 🔧 Controlador: `parqueaderoapi.php`
-**Endpoints Principales:**
+### 📄 **Vista: `parqueadero.php`**
+**Responsabilidad**: Interfaz de operaciones del parqueadero
+- **Tecnología**: PHP + JavaScript + CSS Grid
+- **Funciones**:
+  - Registro de entrada de vehículos
+  - Gestión de salidas y facturación
+  - Visualización en tiempo real del estado
+  - Búsqueda y filtros de vehículos
+
+### 🔧 **Controlador: `parqueaderoapi.php`**
+**Responsabilidad**: API para operaciones del parqueadero
+- **Tecnología**: PHP + PDO + JSON
+- **Endpoints Principales**:
 ```php
 POST parqueaderoapi.php?action=registrarEntrada
 - Recibe: placa, id_tipo_servicio, id_modulo
 - Inserta: tabla entrada
 - Actualiza: estado del módulo a OCUPADO
+- Retorna: Confirmación con datos del vehículo
 
 POST parqueaderoapi.php?action=registrarSalida
 - Recibe: id_entrada, id_salida
-- Calcula: tarifa según tiempo y tipo de servicio
+- Calcula: tarifa según tiempo y tipo_servicio
 - Inserta: tabla salida
 - Inserta: tabla factura (estado PENDIENTE)
+- Retorna: Factura generada pendiente de pago
 
 GET parqueaderoapi.php?action=getEstadoActual
 - Consulta: JOIN entrada ↔ salida ↔ tipo_servicio ↔ modulo
@@ -138,68 +272,116 @@ GET parqueaderoapi.php?action=getEstadoActual
 
 ## 🚗 MÓDULO VEHÍCULOS
 
-### 📄 Vista: `vehiculos.php`
-**Funcionalidades:**
-1. **Listado Completo**: Todos los vehículos registrados
-2. **Búsqueda Avanzada**: Por placa, tipo, estado
-3. **Historial de Servicios**: Todos los usos del vehículo
-4. **Estadísticas Individuales**: Frecuencia, ingresos totales
-
-### 🔧 Controlador: `vehiculosapi.php`
-**Endpoints Principales:**
-```php
-GET vehiculosapi.php?action=getVehiculos
-- Consulta: SELECT * FROM entrada ORDER BY fecha_hora_entrada DESC
-- Tabla: entrada
-- Retorna: Lista de vehículos con estado actual
-
-GET vehiculosapi.php?action=getHistorialVehiculo
-- Recibe: placa
-- Consulta: JOIN entrada ↔ salida ↔ factura ↔ tipo_servicio
-- Retorna: Historial completo del vehículo
+### � **FLUJO COMPLETO DE GESTIÓN**
+```
+Usuario → vehículos.php → vehiculosapi.php → Base de Datos → Vehículos
 ```
 
-**Filtros Disponibles:**
-- Por placa exacta
-- Por tipo de servicio
-- Por estado (activo/inactivo)
-- Por rango de fechas
+### � **Vista: `vehiculos.php`**
+**Responsabilidad**: Interfaz de gestión de vehículos
+- **Tecnología**: PHP + HTML + CSS Grid + JavaScript
+- **Funciones**:
+  1. **Catálogo de vehículos**: Grid responsive con filtros
+  2. **Registro de vehículos**: Formulario con cliente existente/nuevo
+  3. **Búsqueda avanzada**: Por placa, modelo, propietario
+  4. **Edición inline**: Modal con validación
+  5. **Estadísticas**: Totales por estado
+
+### 🔧 **Controlador: `vehiculosapi.php`**
+**Responsabilidad**: API REST para gestión de vehículos
+- **Tecnología**: PHP + PDO + JSON
+- **Endpoints Principales**:
+```php
+GET vehiculosapi.php?action=getAll
+- Consulta: SELECT v.*, u.nombre as nombre_cliente 
+           FROM vehiculo v 
+           LEFT JOIN cliente c ON v.id_cliente = c.id_cliente
+           LEFT JOIN users u ON c.cedula_users = u.cedula
+- Tablas: vehiculo, cliente, users
+- Retorna: Lista completa de vehículos con datos de clientes
+
+POST vehiculosapi.php?action=create
+- Recibe: placa, id_cliente, marca, modelo, color
+- Inserta: tabla vehiculo
+- Retorna: Confirmación de registro
+
+POST vehiculosapi.php?action=createWithClient
+- Recibe: datos de cliente + datos de vehículo
+- Proceso: 
+  1. Verifica si cliente existe
+  2. Si no existe, inserta en tabla cliente
+  3. Inserta vehículo con ID del cliente
+  4. Usa transacciones para integridad
+- Retorna: Confirmación completa
+
+GET vehiculosapi.php?action=getClientes
+- Consulta: SELECT c.id_cliente, u.nombre, c.cedula_users
+           FROM cliente c 
+           LEFT JOIN users u ON c.cedula_users = u.cedula
+- Tablas: cliente, users
+- Retorna: Lista de clientes para el select
+```
+
+**Relaciones de Datos:**
+- `vehiculo` ↔ `cliente` (id_cliente)
+- `cliente` ↔ `users` (cedula_users)
+- Integridad referencial completa con JOINs
+
+**Validaciones Implementadas:**
+- ✅ **Placa única**: Verificación de duplicados
+- ✅ **Campos obligatorios**: Validación frontend y backend
+- ✅ **Transacciones ACID**: Rollback automático en errores
+- ✅ **Sanitización**: Escape de datos y prepared statements
 
 ---
 
 ## 💳 MÓDULO PAGOS Y FACTURACIÓN
 
-### 📄 Vista: `pagos.php`
-**Funcionalidades:**
-1. **Facturas Pendientes**: Lista de cobros pendientes
-2. **Historial de Pagos**: Todos los pagos del día
-3. **Procesamiento de Pagos**: Marcar facturas como pagadas
-4. **Estadísticas Diarias**: Ingresos, transacciones, promedio
+### � **FLUJO COMPLETO DE FACTURACIÓN**
+```
+Vehículo sale → factura generada → pagos.php → Procesamiento → Estadísticas
+```
 
-### 🔧 Controlador: `facturaapi.php`
-**Endpoints Principales:**
+### � **Vista: `pagos.php`**
+**Responsabilidad**: Interfaz de facturación y pagos
+- **Tecnología**: PHP + JavaScript MVC
+- **Proceso de Pago:**
+1. **Selección de Factura**: Usuario elige factura pendiente
+2. **Método de Pago**: EFECTIVO, TRANSFERENCIA (únicos métodos disponibles)
+3. **Confirmación**: Actualiza estado en BD con método seleccionado
+4. **Estadísticas**: Actualiza contadores diarios por método de pago
+
+### 🔧 **Controlador: `facturaapi.php`**
+**Responsabilidad**: API REST para facturación
+- **Tecnología**: PHP + PDO + JSON
+- **Endpoints Principales**:
 ```php
 GET facturaapi.php?action=getPendientes
-- Consulta: JOIN factura ↔ salida ↔ entrada ↔ tipo_servicio ↔ modulo
+- Consulta: JOIN factura ↔ salida ↔ entrada ↔ tipo_servicio
 - WHERE: f.estado_pago = 'PENDIENTE'
-- Retorna: Facturas pendientes de cobro
+- Tablas: factura, salida, entrada, tipo_servicio
+- Retorna: Facturas pendientes con datos completos
 
 GET facturaapi.php?action=getPagadas&fecha=YYYY-MM-DD
 - Consulta: JOIN factura ↔ salida ↔ entrada ↔ tipo_servicio
-- WHERE: f.estado_pago = 'PAGADA' AND DATE(f.fecha_emision) = ?
-- Retorna: Pagos del día especificado
+- WHERE: f.estado_pago = 'PAGADA' AND DATE(fecha_emision) = ?
+- Retorna: Pagos del día con método y montos
 
 POST facturaapi.php?action=procesarPago
 - Recibe: id_factura, metodo_pago
-- Actualiza: factura.estado_pago = 'PAGADA'
-- Actualiza: factura.fecha_emision = NOW()
+- Proceso: 
+  1. Valida factura existente
+  2. Actualiza estado_pago = 'PAGADA'
+  3. Registra fecha_emision = NOW()
+  4. Registra metodo_pago
+- Retorna: Confirmación con datos actualizados
 ```
 
-**Proceso de Pago:**
-1. **Selección de Factura**: Usuario elige factura pendiente
-2. **Método de Pago**: EFECTIVO, TARJETA, TRANSFERENCIA
-3. **Confirmación**: Actualiza estado en BD
-4. **Estadísticas**: Actualiza contadores diarios
+**Integridad de Datos:**
+- ✅ **Transacciones ACID**: Todo o nada
+- ✅ **Relaciones completas**: factura → salida → entrada
+- ✅ **Consistencia**: Estados sincronizados
+- ✅ **Validaciones**: Previene duplicados y errores
 
 **Tablas Involucradas:**
 - `factura`: Registro de facturas y pagos
@@ -211,16 +393,24 @@ POST facturaapi.php?action=procesarPago
 
 ## 📋 MÓDULO REPORTES
 
-### 📄 Vista: `reportes.php`
-**Funcionalidades:**
-1. **Reportes por Rango**: Selección de fechas personalizadas
-2. **Estadísticas Consolidadas**: Resumen del período
-3. **Gráficos Dinámicos**: Por tipo de servicio, por hora
-4. **Exportación PDF**: Generación de reportes imprimibles
-5. **Períodos Rápidos**: Hoy, ayer, semana, mes, año
+### � **FLUJO COMPLETO DE REPORTES**
+```
+Usuario → reportes.php → reportesapi.php → Base de Datos → PDF
+```
 
-### 🔧 Controlador: `reportesapi.php`
-**Endpoints Principales:**
+### � **Vista: `reportes.php`**
+**Responsabilidad**: Interfaz de generación de reportes
+- **Tecnología**: PHP + JavaScript + Chart.js + jsPDF
+- **Funciones**:
+  - Selección de períodos (hoy, semana, mes, personalizado)
+  - Estadísticas visuales con gráficos dinámicos
+  - Previsualización antes de generar PDF
+  - Exportación múltiple (PDF, Excel)
+
+### 🔧 **Controlador: `reportesapi.php`**
+**Responsabilidad**: API REST para generación de reportes
+- **Tecnología**: PHP + PDO + JSON
+- **Endpoints Principales**:
 ```php
 GET reportesapi.php?action=getResumen&fecha_inicio=X&fecha_fin=Y
 - Consulta: 
@@ -229,82 +419,125 @@ GET reportesapi.php?action=getResumen&fecha_inicio=X&fecha_fin=Y
   - Tiempo promedio: AVG(TIMEDIFF(s.fecha_hora_salida, e.fecha_hora_entrada))
   - Mejor servicio: TOP 1 por ingresos
 - Tablas: factura, entrada, salida, tipo_servicio
+- Retorna: Resumen consolidado del período
 
 GET reportesapi.php?action=getPorTipo&fecha_inicio=X&fecha_fin=Y
 - Consulta: 
   - Agrupado por tipo de servicio
   - COUNT(*) como cantidad
   - SUM(f.monto_total) como ingresos
-- Tablas: factura, entrada, tipo_servicio
+- Tablas: factura, entrada, salida, tipo_servicio
+- Retorna: Desglose por tipo de servicio
 
 GET reportesapi.php?action=getPorHora&fecha_inicio=X&fecha_fin=Y
 - Consulta:
   - Agrupado por hora del día
   - COUNT(*) como cantidad por hora
 - Tablas: entrada, salida
-
-GET reportesapi.php?action=getDetalle&fecha_inicio=X&fecha_fin=Y
-- Consulta: JOIN completo de todas las tablas
-- Retorna: Registro detallado de cada transacción
+- Retorna: Distribución horaria de vehículos
 ```
 
-**Generación de PDF:**
-1. **Captura de Vista**: Usa html2canvas para capturar DOM
-2. **jsPDF**: Genera PDF profesional
-3. **Diseño Corporativo**: Colores y formato PARKINGSURE
-4. **Descarga Automática**: Opción de guardar en dispositivo
+### 🐍 **Módulo PDF (Python)**
+**Responsabilidad**: Generación profesional de documentos PDF
+- **Tecnología**: Python + fpdf2 + pandas
+- **Archivo**: `reportes_pdf.py`
+- **Funciones**:
+  - Generación de ingresos (reporte financiero)
+  - Generación de ocupación (estadísticas del parqueadero)
+  - Generación de vehículos (catálogo completo)
+  - Manejo interactivo de descargas
+  - Diseño corporativo con branding PARKINGSURE
+
+**Integración**:
+- ✅ **Llamada desde PHP**: exec() para ejecutar script Python
+- ✅ **Parámetros dinámicos**: Fechas y filtros pasados como argumentos
+- ✅ **Retorno JSON**: Resultados de la consulta SQL
+- ✅ **Manejo de errores**: Captura y logging de excepciones
 
 ---
 
 ## 👥 MÓDULO USUARIOS
 
-### 📄 Vista: `usuarios.php`
-**Funcionalidades:**
-1. **Gestión de Personal**: CRUD de usuarios
-2. **Asignación de Roles**: ADMINISTRADOR, OPERADOR
-3. **Control de Accesos**: Estado de cuentas
-4. **Permisos por Rol**: Diferentes niveles de acceso
+### � **FLUJO COMPLETO DE GESTIÓN**
+```
+Administrador → usuarios.php → dashboardapi.php → Base de Datos → Usuarios
+```
 
-### 🔧 Controlador: `dashboardapi.php`
-**Endpoints Principales:**
+### 📄 **Vista: `usuarios.php`**
+**Responsabilidad**: Interfaz de gestión de usuarios
+- **Tecnología**: PHP + HTML + CSS Grid
+- **Funciones**:
+  1. **CRUD completo**: Crear, leer, actualizar, eliminar usuarios
+  2. **Asignación de roles**: ADMINISTRADOR, OPERADOR
+  3. **Validación**: Formularios con validación frontend y backend
+  4. **Permisos**: Control de acceso por rol
+
+### 🔧 **Controlador: `dashboardapi.php`**
+**Responsabilidad**: API REST para gestión de usuarios
+- **Tecnología**: PHP + PDO + JSON
+- **Endpoints Principales**:
 ```php
 GET dashboardapi.php?action=getUsuarios
 - Consulta: JOIN personal ↔ roles
-- Retorna: Lista de usuarios con rol asignado
+- Tablas: personal, roles
+- Retorna: Lista completa con roles asignados
 
 POST dashboardapi.php?action=guardarUsuario
-- Recibe: Todos los campos del formulario
-- Inserta: tabla personal
-- Hashea: contraseña con password_hash()
+- Proceso: 
+  1. Validación de campos obligatorios
+  2. Hash de contraseña con password_hash()
+  3. Inserta en tabla personal
+  4. Asigna rol existente
+  5. Retorna confirmación
 
 POST dashboardapi.php?action=actualizarUsuario
-- Recibe: id_usuario y campos actualizados
-- Actualiza: tabla personal
-- Maneja: cambio de contraseña si se proporciona
+- Proceso:
+  1. Verifica existencia del usuario
+  2. Actualiza campos en tabla personal
+  3. Maneja cambio de contraseña si se proporciona
+  4. Mantiene integridad referencial
+  5. Retorna confirmación
 
 POST dashboardapi.php?action=eliminarUsuario
-- Recibe: id_usuario
-- Verifica: que no sea el usuario actual
-- Elimina: Lógico (soft delete recomendado)
+- Proceso:
+  1. Verifica que no sea el usuario actual
+  2. Soft delete (desactivación lógica)
+  3. Mantiene integridad de datos relacionados
+  4. Retorna confirmación
 ```
 
 **Permisos por Rol:**
 - **ADMINISTRADOR**: Acceso completo a todos los módulos
 - **OPERADOR**: Acceso limitado a operaciones diarias
 
+**Seguridad Implementada:**
+- ✅ **Password Hashing**: bcrypt/password_hash
+- ✅ **SQL Injection**: Prepared statements
+- ✅ **Validación**: Frontend y backend completa
+- ✅ **Integridad**: Soft delete y relaciones mantenidas
+
 ---
 
 ## ⚙️ MÓDULO SERVICIOS
 
-### 📄 Vista: `servicios.php`
-**Funcionalidades:**
-1. **Catálogo de Servicios**: Lista de tipos de tarifa
-2. **Gestión de Precios**: Actualización de tarifas
-3. **Activación/Desactivación**: Control de servicios disponibles
-4. **Estadísticas de Uso**: Frecuencia de cada servicio
+### � **FLUJO COMPLETO DE GESTIÓN**
+```
+Administrador → servicios.php → dashboardapi.php → Base de Datos → Servicios
+```
 
-### 🔧 Controlador: `dashboardapi.php`
-**Endpoints Principales:**
+### �� **Vista: `servicios.php`**
+**Responsabilidad**: Interfaz de gestión de servicios
+- **Tecnología**: PHP + HTML + CSS Grid
+- **Funciones**:
+  1. **Catálogo de servicios**: Grid responsive con filtros
+  2. **Gestión de precios**: Actualización de tarifas
+  3. **Activación/Desactivación**: Control de servicios disponibles
+  4. **Estadísticas de uso**: Frecuencia de cada servicio
+
+### 🔧 **Controlador: `dashboardapi.php`**
+**Responsabilidad**: API REST para gestión de servicios
+- **Tecnología**: PHP + PDO + JSON
+- **Endpoints Principales**:
 ```php
 GET dashboardapi.php?action=getServicios
 - Consulta: SELECT * FROM tipo_servicio ORDER BY nombre_tipo_servicio
@@ -313,18 +546,24 @@ GET dashboardapi.php?action=getServicios
 
 POST dashboardapi.php?action=guardarServicio
 - Recibe: nombre_tipo_servicio, tarifa, descripcion
-- Inserta: tabla tipo_servicio
-- Valida: campos obligatorios
+- Proceso: 
+  1. Validación de campos obligatorios
+  2. Inserta en tabla tipo_servicio
+  3. Retorna confirmación
 
 POST dashboardapi.php?action=actualizarServicio
 - Recibe: id_tipo_servicio y campos actualizados
-- Actualiza: tabla tipo_servicio
-- Maneja: cambios de tarifa
+- Proceso:
+  1. Verifica existencia del servicio
+  2. Actualiza campos en tabla tipo_servicio
+  3. Maneja cambios de tarifa
+  4. Retorna confirmación
 
 POST dashboardapi.php?action=toggleServicio
 - Recibe: id_tipo_servicio
-- Actualiza: estado (ACTIVO/INACTIVO)
-- Retorna: Nuevo estado del servicio
+- Proceso:
+  1. Actualiza estado (ACTIVO/INACTIVO)
+  2. Retorna nuevo estado del servicio
 ```
 
 **Tipos de Servicios:**
@@ -332,6 +571,12 @@ POST dashboardapi.php?action=toggleServicio
 - **DÍA**: Tarifa diaria (sin importar hora)
 - **MES**: Tarifa mensual (sin importar días)
 - **ESTÁNDAR**: Tarifa base del sistema
+
+**Validaciones Implementadas:**
+- ✅ **Campos obligatorios**: Validación frontend y backend
+- ✅ **Servicios únicos**: No duplicar nombres de servicio
+- ✅ **Tarifas válidas**: Validación de valores numéricos
+- ✅ **Transacciones**: Manejo con rollback automático
 
 ---
 

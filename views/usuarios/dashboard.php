@@ -168,13 +168,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
     <!-- Occupancy by type -->
     <div class="card">
-      <div class="card-title">
-        <span class="card-title-icon">📈</span>
-        Ocupación por Tipo
-      </div>
-      <div class="occupancy-bars" id="ocupacion-por-tipo">
-        <!-- Las barras se cargarán dinámicamente -->
-      </div>
+      
 
       <hr class="divider">
 

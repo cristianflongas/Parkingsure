@@ -5,6 +5,15 @@
  */
 require_once __DIR__ . '/../config/database.php';
 
+// Desactivar cualquier salida de errores y warnings
+error_reporting(0);
+ini_set('display_errors', 0);
+
+// Limpiar cualquier salida anterior
+if (ob_get_level()) {
+    ob_end_clean();
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
@@ -34,13 +43,162 @@ try {
             break;
     }
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()]);
+    // Limpiar cualquier salida antes de enviar JSON
+    ob_clean();
+    
+    // Capturar el error en el log pero no mostrarlo en pantalla
+    error_log("❌ Error en API: " . $e->getMessage());
+    
+    // Enviar respuesta JSON limpia
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Error del servidor',
+        'error' => $e->getMessage()
+    ]);
 }
 
 function handleGet($conn) {
     $action = $_GET['action'] ?? '';
     
     switch ($action) {
+        case 'getClientes':
+            // Obtener todos los clientes para el select
+            error_log("🔍 API: Ejecutando getClientes");
+            
+            try {
+                // Verificar si la tabla cliente existe y tiene datos
+                $stmt = $conn->prepare("SELECT COUNT(*) as total FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cliente'");
+                $stmt->execute();
+                $tableExists = $stmt->fetch(PDO::FETCH_ASSOC);
+                error_log("📋 Tabla cliente existe: " . json_encode($tableExists));
+                
+                if ($tableExists['total'] > 0) {
+                    // Construir consulta con JOIN entre cliente y users
+                    $query = "SELECT 
+                        c.id_cliente,
+                        c.cedula_users as cedula,
+                        c.telefono,
+                        c.correo,
+                        u.nombre as nombre_usuario,
+                        u.usuario as username
+                    FROM cliente c
+                    LEFT JOIN users u ON c.cedula_users = u.cedula
+                    ORDER BY u.nombre ASC";
+                    
+                    error_log("📋 Query con JOIN: " . $query);
+                    
+                    $stmt = $conn->prepare($query);
+                    if ($stmt->execute()) {
+                        $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        error_log("📊 API: Se encontraron " . count($clientes) . " clientes con JOIN");
+                        
+                        // Formatear para compatibilidad con frontend
+                        $clientesFormateados = [];
+                        foreach ($clientes as $cliente) {
+                            $clientesFormateados[] = [
+                                'id_cliente' => $cliente['id_cliente'],
+                                'nombre' => $cliente['nombre_usuario'] ?: $cliente['id_cliente'], // Usar nombre de usuario o ID como fallback
+                                'cedula' => $cliente['cedula'],
+                                'telefono' => $cliente['telefono'],
+                                'correo' => $cliente['correo']
+                            ];
+                        }
+                        
+                        // Limpiar cualquier salida antes de enviar JSON
+                        ob_clean();
+                        
+                        // Desactivar buffer de salida para evitar HTML mezclado
+                        if (ob_get_level()) {
+                            ob_end_clean();
+                        }
+                        
+                        echo json_encode([
+                            'success' => true,
+                            'data' => $clientesFormateados,
+                            'count' => count($clientesFormateados),
+                            'source' => 'cliente_users_join',
+                            'query' => $query
+                        ]);
+                        
+                        // Salir para evitar cualquier salida adicional
+                        exit;
+                    } else {
+                        throw new Exception("Error ejecutando consulta con JOIN");
+                    }
+                } else {
+                    error_log("⚠️ Tabla cliente no existe, intentando con users");
+                    throw new Exception("Tabla cliente no existe");
+                }
+                
+            } catch (Exception $e) {
+                error_log("❌ API: Error principal: " . $e->getMessage());
+                
+                try {
+                    // Alternativa: usar tabla users
+                    $stmt = $conn->prepare("DESCRIBE users");
+                    $stmt->execute();
+                    $userColumns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    error_log("📋 Estructura tabla users: " . json_encode($userColumns));
+                    
+                    $userFields = array_column($userColumns, 'Field');
+                    error_log("📋 Columnas users: " . json_encode($userFields));
+                    
+                    // Construir consulta para users - usar solo columnas que existen
+                    $selectUserFields = [];
+                    foreach ($userFields as $field) {
+                        $selectUserFields[] = "u.`$field`";
+                    }
+                    $userFieldsStr = implode(', ', $selectUserFields);
+                    
+                    // Buscar columna de rol (puede tener diferentes nombres)
+                    $rolColumn = null;
+                    foreach ($userColumns as $col) {
+                        $fieldName = strtolower($col['Field']);
+                        if (strpos($fieldName, 'rol') !== false) {
+                            $rolColumn = $col['Field'];
+                            break;
+                        }
+                    }
+                    
+                    if ($rolColumn) {
+                        $query = "SELECT $userFieldsStr FROM users u WHERE u.`$rolColumn` IN ('CLIENTE', 'OPERADOR', 'ADMINISTRADOR') ORDER BY u.nombre ASC";
+                    } else {
+                        // Si no hay columna de rol, traer todos los usuarios
+                        $query = "SELECT $userFieldsStr FROM users u ORDER BY u.nombre ASC";
+                    }
+                    error_log("📋 Query users: " . $query);
+                    
+                    $stmt = $conn->prepare($query);
+                    if ($stmt->execute()) {
+                        $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        error_log("� API: Se encontraron " . count($clientes) . " usuarios como clientes");
+                        
+                        echo json_encode([
+                            'success' => true,
+                            'data' => $clientes,
+                            'count' => count($clientes),
+                            'source' => 'tabla_users',
+                            'query' => $query
+                        ]);
+                    } else {
+                        throw new Exception("Error ejecutando consulta de users");
+                    }
+                    
+                } catch (Exception $e2) {
+                    error_log("❌ API: Error alternativo: " . $e2->getMessage());
+                    
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Error crítico: ' . $e2->getMessage(),
+                        'debug' => [
+                            'primary_error' => $e->getMessage(),
+                            'fallback_error' => $e2->getMessage()
+                        ]
+                    ]);
+                }
+            }
+            break;
+            
         case 'getAll':
             // Obtener todos los vehículos con información del cliente
             $stmt = $conn->prepare(
@@ -54,11 +212,7 @@ function handleGet($conn) {
             $stmt->execute();
             $vehiculos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            echo json_encode([
-                'success' => true,
-                'data' => $vehiculos,
-                'total' => count($vehiculos)
-            ]);
+            echo json_encode(['success' => true, 'data' => $vehiculos]);
             break;
             
         case 'getById':

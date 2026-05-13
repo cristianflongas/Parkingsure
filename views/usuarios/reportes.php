@@ -201,6 +201,10 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
         </tbody>
       </table>
     </div>
+    <!-- Controles de paginación -->
+    <div class="pagination" id="paginacionDetalle">
+      <!-- Los botones de paginación se cargarán dinámicamente -->
+    </div>
   </div>
 </div>
 
@@ -319,8 +323,19 @@ function setPeriodoRapido() {
         const diaSemana = hoy.getDay();
         const diasARestar = diaSemana === 0 ? 6 : diaSemana - 1;
         inicioSemana.setDate(hoy.getDate() - diasARestar);
+        
+        // La semana debe terminar el domingo actual
+        const finSemana = new Date(inicioSemana);
+        finSemana.setDate(inicioSemana.getDate() + 6);
+        
         fechaInicio = inicioSemana;
-        fechaFin = hoy;
+        fechaFin = finSemana;
+        
+        console.log('🗓️ Debug semana - día de semana:', diaSemana);
+        console.log('🗓️ Debug semana - días a restar:', diasARestar);
+        console.log('🗓️ Debug semana - fecha inicio:', inicioSemana);
+        console.log('🗓️ Debug semana - fecha fin:', finSemana);
+        console.log('🗓️ Debug semana - días de diferencia:', (finSemana - inicioSemana) / (1000 * 60 * 60 * 24));
         break;
       case 'mes':
         fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -357,8 +372,20 @@ function setPeriodoRapido() {
     console.log('📅 Fechas a establecer:', {inicio: fechaInicioStr, fin: fechaFinStr});
     
     // Establecer fechas en los inputs
-    document.getElementById('fechaInicio').value = formatoFecha(fechaInicio);
-    document.getElementById('fechaFin').value = formatoFecha(fechaFin);
+    const inputInicio = document.getElementById('fechaInicio');
+    const inputFin = document.getElementById('fechaFin');
+    
+    console.log('📝 Inputs encontrados:', {inicio: !!inputInicio, fin: !!inputFin});
+    
+    if (inputInicio) {
+      inputInicio.value = formatoFecha(fechaInicio);
+      console.log('📅 Input inicio establecido:', inputInicio.value);
+    }
+    
+    if (inputFin) {
+      inputFin.value = formatoFecha(fechaFin);
+      console.log('📅 Input fin establecido:', inputFin.value);
+    }
     
     // Limpiar el select para evitar bucles
     document.getElementById('periodoRapido').value = '';
@@ -570,20 +597,54 @@ function setPeriodoRapido() {
     });
   }
 
+  /* ── Variables globales para paginación ── */
+  let paginaActualDetalle = 1;
+  let registrosPorPagina = 10;
+  let todosLosDetalles = [];
+  let totalDetallesPages = 1;
+  let totalDetallesItems = 0;
+
   /* ── Tabla detalle ── */
   function renderDetalle(result) {
     const tb = document.getElementById('repTable');
     tb.innerHTML = '';
+    
     if (!result.success || !result.data.length) {
       const fechaInicio = document.getElementById('fechaInicio').value;
       const fechaFin = document.getElementById('fechaFin').value;
       const labelRango = getLabelRango(fechaInicio, fechaFin);
-      tb.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📋</div><p>Sin registros para ${labelRango}</p></div></td></tr>`;
+      tb.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📋</div><p>Sin registros para ${labelRango}</p></div></td></tr>`;
       document.getElementById('totalDetalle').textContent = '';
+      document.getElementById('paginacionDetalle').innerHTML = '';
       return;
     }
+    
+    // Guardar todos los datos para paginación
+    todosLosDetalles = result.data;
+    paginaActualDetalle = 1; // Resetear a primera página
+    
+    // Actualizar variables de paginación
+    totalDetallesItems = result.data.length;
+    totalDetallesPages = Math.max(1, Math.ceil(totalDetallesItems / registrosPorPagina));
+    
+    // Actualizar contador total
     document.getElementById('totalDetalle').textContent = `${result.data.length} registros`;
-    result.data.forEach(r => {
+    
+    // Renderizar primera página
+    renderPaginaDetalle();
+    renderPagination('paginacionDetalle', paginaActualDetalle, totalDetallesPages, cambiarPaginaDetalle);
+  }
+
+  /* ── Renderizar página de detalles ── */
+  function renderPaginaDetalle() {
+    const tb = document.getElementById('repTable');
+    tb.innerHTML = '';
+    
+    const inicio = (paginaActualDetalle - 1) * registrosPorPagina;
+    const fin = Math.min(inicio + registrosPorPagina, todosLosDetalles.length);
+    const paginaDatos = todosLosDetalles.slice(inicio, fin);
+    
+    paginaDatos.forEach(r => {
       const tr = document.createElement('tr');
       let badge = '';
       if (!r.fecha_hora_salida)        badge = '<span class="badge-act">En curso</span>';
@@ -600,6 +661,102 @@ function setPeriodoRapido() {
         <td>${badge}</td>`;
       tb.appendChild(tr);
     });
+  }
+
+  /* ── Cambiar página de detalles ── */
+  function cambiarPaginaDetalle(nuevaPagina) {
+    if (nuevaPagina < 1 || nuevaPagina > totalDetallesPages) {
+      return;
+    }
+    
+    paginaActualDetalle = nuevaPagina;
+    renderPaginaDetalle();
+    renderPagination('paginacionDetalle', paginaActualDetalle, totalDetallesPages, cambiarPaginaDetalle);
+    
+    // Scroll al inicio de la tabla
+    document.getElementById('repTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Función reutilizable para renderizar paginación
+  function renderPagination(containerId, currentPage, totalPages, loadFunction) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    // Botón anterior
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'pagination-btn';
+    prevBtn.innerHTML = '←';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => loadFunction(currentPage - 1);
+    container.appendChild(prevBtn);
+
+    // Lógica de páginas a mostrar
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    if (endPage - startPage < 4) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    // Primera página si no está visible
+    if (startPage > 1) {
+      const firstBtn = document.createElement('button');
+      firstBtn.className = 'pagination-btn';
+      firstBtn.textContent = '1';
+      firstBtn.onclick = () => loadFunction(1);
+      container.appendChild(firstBtn);
+      
+      if (startPage > 2) {
+        const dots = document.createElement('span');
+        dots.className = 'pagination-info';
+        dots.textContent = '...';
+        container.appendChild(dots);
+      }
+    }
+
+    // Páginas numeradas
+    for (let i = startPage; i <= endPage; i++) {
+      const pageBtn = document.createElement('button');
+      pageBtn.className = 'pagination-btn';
+      if (i === currentPage) {
+        pageBtn.classList.add('active');
+      }
+      pageBtn.textContent = i;
+      pageBtn.onclick = () => loadFunction(i);
+      container.appendChild(pageBtn);
+    }
+
+    // Última página si no está visible
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        const dots = document.createElement('span');
+        dots.className = 'pagination-info';
+        dots.textContent = '...';
+        container.appendChild(dots);
+      }
+      
+      const lastBtn = document.createElement('button');
+      lastBtn.className = 'pagination-btn';
+      lastBtn.textContent = totalPages;
+      lastBtn.onclick = () => loadFunction(totalPages);
+      container.appendChild(lastBtn);
+    }
+
+    // Botón siguiente
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'pagination-btn';
+    nextBtn.innerHTML = '→';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => loadFunction(currentPage + 1);
+    container.appendChild(nextBtn);
+
+    // Información de total
+    const info = document.createElement('span');
+    info.className = 'pagination-info';
+    info.textContent = `${totalDetallesItems} registros`;
+    container.appendChild(info);
   }
 
   /* ════════════════════════════════════════
@@ -1296,16 +1453,33 @@ function setPeriodoRapido() {
   /* ── Hamburger ── */
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const navLinks     = document.getElementById('nav-links');
-  hamburgerBtn.addEventListener('click', () => {
-    navLinks.classList.toggle('active');
-    hamburgerBtn.classList.toggle('active');
-  });
-  document.addEventListener('click', e => {
-    if (!hamburgerBtn.contains(e.target) && !navLinks.contains(e.target)) {
-      navLinks.classList.remove('active');
-      hamburgerBtn.classList.remove('active');
-    }
-  });
+  
+  // Asegurarse de que los elementos existen antes de agregar eventos
+  if (hamburgerBtn && navLinks) {
+    console.log('🍔 Inicializando menú hamburguesa');
+    
+    hamburgerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('🍔 Click en hamburguesa, toggle menú');
+      navLinks.classList.toggle('active');
+      hamburgerBtn.classList.toggle('active');
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!hamburgerBtn.contains(e.target) && !navLinks.contains(e.target)) {
+        console.log('🍔 Click fuera, cerrando menú');
+        navLinks.classList.remove('active');
+        hamburgerBtn.classList.remove('active');
+      }
+    });
+    
+    // Prevenir que el menú se cierre al hacer click dentro
+    navLinks.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  } else {
+    console.error('🍔 Error: No se encontraron elementos del menú hamburguesa');
+  }
 
   // ── Inicialización ── */
   document.addEventListener('DOMContentLoaded', () => {
@@ -1336,7 +1510,7 @@ function setPeriodoRapido() {
     console.log('🌍 Zona horaria detectada automáticamente');
     console.log('🕐 Fecha local actual:', hoyLocal.toString());
     console.log('📅 Fecha formateada (local):', hoy);
-    console.log('⏰ Offset zona horaria:', zonaHorariaOffset, 'minutos');
+    console.log('⏰ Offset zona horaria:', hoyLocal.getTimezoneOffset(), 'minutos');
     
     // Establecer bandera para evitar doble carga
     cargandoReporte = true;

@@ -228,12 +228,8 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   async function cargarVehiculos(page = 1) {
     try {
       currentVehiculosPage = page;
-      console.log('Cargando vehículos página:', page); // Debug
-      
       const response = await fetch(`../../controllers/vehiculosapi.php?action=getAll`);
       const result = await response.json();
-      
-      console.log('Respuesta de vehículos:', result); // Debug
       
       if (result.success) {
         // Mapear datos de vehículos
@@ -252,7 +248,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
         // Si es la primera página, reemplazar todo; si no, añadir
         if (page === 1) {
-          vehiculos = nuevosVehiculos;
+          vehiculos = [...nuevosVehiculos];
         } else {
           // Mantener vehículos de páginas anteriores para búsqueda
           vehiculos = [...vehiculos, ...nuevosVehiculos];
@@ -386,20 +382,45 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   // Cargar clientes existentes
   async function cargarClientes() {
     try {
-      const response = await fetch('../../controllers/clientevehiculocontroller.php?action=getClientes');
+      const url = '../../controllers/vehiculosapi.php?action=getClientes';
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const result = await response.json();
+      
       if (result.success) {
         const select = document.getElementById('selectCliente');
+        
         select.innerHTML = '<option value="">Seleccione un cliente...</option>';
-        result.data.forEach(cliente => {
-          const option = document.createElement('option');
-          option.value = cliente.id_cliente;
-          option.textContent = `${cliente.nombre} (${cliente.cedula})`;
-          select.appendChild(option);
-        });
+        
+        if (result.data && result.data.length > 0) {
+          result.data.forEach((cliente) => {
+            const option = document.createElement('option');
+            
+            // Verificar y asignar valores seguros
+            const idCliente = cliente.id_cliente || cliente.cedula || 'unknown';
+            const nombre = cliente.nombre || 'Sin nombre';
+            const cedula = cliente.cedula || cliente.cedula_users || 'Sin cédula';
+            
+            option.value = idCliente;
+            option.textContent = `${nombre} (${cedula})`;
+            
+            select.appendChild(option);
+          });
+        } else {
+          select.innerHTML = '<option value="">No hay clientes registrados</option>';
+        }
+      } else {
+        const select = document.getElementById('selectCliente');
+        select.innerHTML = '<option value="">Error al cargar clientes</option>';
       }
     } catch (error) {
-      console.error('Error cargando clientes:', error);
+      const select = document.getElementById('selectCliente');
+      select.innerHTML = '<option value="">Error de conexión</option>';
     }
   }
 
@@ -504,10 +525,17 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
         data.correo_cliente = correo;
         
         // Registrar cliente y vehículo juntos
-        const response = await fetch('../../controllers/clientevehiculocontroller.php?action=registrarIntegrado', {
+        const response = await fetch('../../controllers/vehiculosapi.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          body: JSON.stringify({
+            action: 'createWithClient',
+            placa: data.placa_vehiculo,
+            id_cliente: data.id_cliente,
+            marca: data.marca,
+            modelo: data.modelo,
+            color: data.color
+          })
         });
         
         const result = await response.json();

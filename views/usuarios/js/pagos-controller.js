@@ -12,8 +12,7 @@ class PagosView {
             facturasTable: document.getElementById('facturasPendientesTable'),
             historialTable: document.getElementById('hisTable'),
             buscarFactura: document.getElementById('buscarFactura'),
-            buscarHis: document.getElementById('buscarHis'),
-            debugLog: document.getElementById('debugLog')
+            buscarHis: document.getElementById('buscarHis')
         };
         
         this.datos = {
@@ -34,26 +33,7 @@ class PagosView {
      * Inicializar la vista
      */
     init() {
-        console.log('🚀 Inicializando vista MVC de Pagos');
-        this.log('✅ Vista inicializada');
         this.cargarDatosIniciales();
-    }
-    
-    /**
-     * Sistema de logging
-     */
-    log(mensaje, tipo = 'info') {
-        const timestamp = new Date().toLocaleTimeString('es-CO');
-        const logEntry = document.createElement('div');
-        logEntry.className = `log-entry log-${tipo}`;
-        logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${mensaje}`;
-        
-        if (this.elementos.debugLog) {
-            this.elementos.debugLog.appendChild(logEntry);
-            this.elementos.debugLog.scrollTop = this.elementos.debugLog.scrollHeight;
-        }
-        
-        console.log(`[${tipo.toUpperCase()}] ${mensaje}`);
     }
     
     /**

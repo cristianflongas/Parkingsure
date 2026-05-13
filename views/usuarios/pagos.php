@@ -460,11 +460,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
         <div class="pay-opt active" data-metodo="EFECTIVO"    onclick="selMetodo(this)"><span class="pm-icon">💵</span>Efectivo</div>
 
-        <div class="pay-opt"        data-metodo="TARJETA"     onclick="selMetodo(this)"><span class="pm-icon">💳</span>Tarjeta</div>
-
         <div class="pay-opt"        data-metodo="TRANSFERENCIA" onclick="selMetodo(this)"><span class="pm-icon">🏦</span>Transferencia</div>
-
-        <div class="pay-opt"        data-metodo="NEQUI"       onclick="selMetodo(this)"><span class="pm-icon">📱</span>Nequi</div>
 
       </div>
 

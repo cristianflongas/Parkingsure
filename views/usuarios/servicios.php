@@ -166,62 +166,47 @@ if ($_SESSION['rol'] !== 'ADMINISTRADOR') {
   // Cargar servicios al inicio
   async function cargarServicios() {
     try {
-        console.log('🔄 Cargando servicios desde la base de datos...');
-        
         // Mostrar valores por defecto mientras carga
         const stActivosElement = document.getElementById('stActivos');
         if (stActivosElement) stActivosElement.textContent = 'Cargando...';
         
-        console.log('🌐 Haciendo petición a: ../../controllers/dashboardapi.php?action=getServicios');
-        
         const response = await fetch('../../controllers/dashboardapi.php?action=getServicios');
-        console.log('📡 Respuesta HTTP:', response.status, response.statusText);
-        
         const result = await response.json();
-        console.log('📊 Datos recibidos:', result);
         
         if (result.success) {
             servicios = result.data;
-            console.log('📋 Servicios cargados:', servicios.length, 'servicios');
-            console.log('📋 Contenido de servicios:', servicios);
+            console.log(' Servicios cargados:', servicios.length, 'servicios');
+            console.log(' Contenido de servicios:', servicios);
             renderCatalogo();
             updateStats();
-            console.log('✅ Servicios cargados desde BD:', servicios.length);
+            console.log(' Servicios cargados desde BD:', servicios.length);
         } else {
-            console.error('❌ Error al cargar servicios:', result.message);
+            console.error(' Error al cargar servicios:', result.message);
         }
     } catch (error) {
-      console.error('❌ Error de conexión:', error);
-      console.error('❌ Stack trace:', error.stack);
+      console.error(' Error de conexión:', error);
+      console.error(' Stack trace:', error.stack);
     }
   }
 
   function renderCatalogo(){
-    console.log('🎨 Renderizando catálogo de servicios...');
-    console.log('📋 Total de servicios:', servicios.length);
-    console.log('📋 Filtro actual:', filtroActual);
     
     const lista = filtroActual==='activos' ? servicios.filter(s=>s.estado==='ACTIVO') : servicios;
-    console.log('📋 Servicios filtrados:', lista.length);
     
     const grid  = document.getElementById('catalogoGrid');
-    console.log('🎯 Elemento grid encontrado:', grid);
     
     if(!lista.length){
-      console.log('⚠️ No hay servicios para mostrar');
       grid.innerHTML=`<div style="text-align:center;padding:48px;color:var(--text-muted)"><div style="font-size:40px;margin-bottom:12px">🅿️</div><div>Sin servicios registrados</div></div>`;
       updateStats(); return;
     }
     
-    console.log('🔄 Creando elementos para', lista.length, 'servicios');
     const g = document.createElement('div'); g.className='svc-grid';
     
     lista.forEach((s,li)=>{
-      console.log('🔍 Procesando servicio:', s);
       const i = servicios.indexOf(s);
       const d = document.createElement('div');
       d.className=`svc-card ${s.estado.toLowerCase()}`;
-      d.innerHTML=`
+      d.innerHTML=` 
         <div class="svc-top">
           <div class="svc-nombre">${s.nombre_tipo_servicio}</div>
           <span class="badge ${s.estado==='ACTIVO'?'badge-emerald':'badge-crimson'} badge-dot">${s.estado}</span>
@@ -232,12 +217,12 @@ if ($_SESSION['rol'] !== 'ADMINISTRADOR') {
           <button class="btn-edit" onclick="abrirEditar(${i})">✏️ Editar</button>
           <button class="btn-del" onclick="pedirToggle(${i})">${s.estado==='ACTIVO'?'Desactivar':'Activar'}</button>
         </div>`;
+      d.onclick = () => abrirEditar(i);
       g.appendChild(d);
     });
     
     grid.innerHTML='';
     grid.appendChild(g);
-    console.log('✅ Catálogo renderizado exitosamente');
     updateStats();
   }
 
