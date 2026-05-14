@@ -20,7 +20,7 @@ if ($_SESSION['rol'] !== 'ADMINISTRADOR') {
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ParkingSure — Servicios</title>
   <link rel="shortcut icon" href="../../img/logo.png">
-  <link href="style/ps-core.css" rel="stylesheet">
+  <link href="style/ps-core.css?v=2" rel="stylesheet">
   <style>
     /* Service catalog cards */
     .svc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
@@ -65,6 +65,7 @@ if ($_SESSION['rol'] !== 'ADMINISTRADOR') {
   <div class="nav-right">
     <div class="user-avatar"><?php echo htmlspecialchars(substr($_SESSION['nombre'] ?? 'U', 0, 1)); ?></div>
     <div class="user-info"><div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div><div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div></div>
+    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>
@@ -209,7 +210,7 @@ if ($_SESSION['rol'] !== 'ADMINISTRADOR') {
       d.innerHTML=` 
         <div class="svc-top">
           <div class="svc-nombre">${s.nombre_tipo_servicio}</div>
-          <span class="badge ${s.estado==='ACTIVO'?'badge-emerald':'badge-crimson'} badge-dot">${s.estado}</span>
+          <span class="badge ${s.estado==='ACTIVO'?'badge-success':'badge-danger'} badge-dot">${s.estado}</span>
         </div>
         <div class="svc-rate">$${parseFloat(s.tarifa).toLocaleString('es-CO')}</div>
         <div class="svc-rate-label">por hora</div>

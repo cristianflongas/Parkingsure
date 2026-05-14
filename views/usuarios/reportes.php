@@ -13,7 +13,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ParkingSure — Reportes</title>
   <link rel="shortcut icon" href="../../img/logo.png">
-  <link href="style/ps-core.css" rel="stylesheet">
+  <link href="style/ps-core.css?v=2" rel="stylesheet">
   <style>
     .filter-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
     .filter-row .fg { flex:1; min-width:140px; }
@@ -30,7 +30,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
     .bar-head { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text-primary); }
     .bar-sub  { color:var(--text-muted); font-size:11px; font-weight:400; }
     .bar-track { height:7px; background:var(--surface-3); border-radius:4px; overflow:hidden; }
-    .bar-fill  { height:100%; border-radius:4px; background:var(--gold); transition:width .7s cubic-bezier(.4,0,.2,1); }
+    .bar-fill  { height:100%; border-radius:4px; background:var(--gold); transition:width .2s ease; }
 
     /* Franjas horarias */
     .hora-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
@@ -99,6 +99,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       <div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div>
       <div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div>
     </div>
+    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>

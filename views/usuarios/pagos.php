@@ -28,7 +28,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
   <link rel="shortcut icon" href="../../img/logo.png">
 
-  <link href="style/ps-core.css" rel="stylesheet">
+  <link href="style/ps-core.css?v=2" rel="stylesheet">
 
   <style>
 
@@ -156,11 +156,11 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
     /* Modal */
 
-    .modal { display:none; position:fixed; z-index:2000; inset:0; background:transparent; align-items:center; justify-content:center; }
+    .modal { display:none; position:fixed; z-index:2000; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; }
 
     .modal.show { display:flex; }
 
-    .modal-content { background:var(--surface-2); border:1px solid var(--border-md); border-radius:var(--r-lg); width:90%; max-width:480px; max-height:90vh; overflow-y:auto; animation:slideIn .25s ease; }
+    .modal-content { background:var(--surface-1); border:1px solid var(--border-md); border-radius:var(--r-lg); width:90%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.1); }
 
     .modal-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid var(--border); }
 
@@ -172,11 +172,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
     .modal-body   { padding:24px; }
 
-    .modal-footer { display:flex; gap:10px; justify-content:flex-end; padding:16px 24px; border-top:1px solid var(--border); background:var(--surface-1); border-radius:0 0 var(--r-lg) var(--r-lg); }
-
-
-
-    @keyframes slideIn { from { transform:translateY(-18px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+    .modal-footer { display:flex; gap:10px; justify-content:flex-end; padding:16px 24px; border-top:1px solid var(--border); background:var(--surface-2); border-radius:0 0 var(--r-lg) var(--r-lg); }
 
 
 
@@ -232,6 +228,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
     </div>
 
+    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
 
   </div>
@@ -558,7 +555,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
       document.getElementById('tbPendientes').innerHTML =
 
-        '<tr><td colspan="5" style="text-align:center;color:var(--crimson);padding:20px">Error al cargar facturas</td></tr>';
+        '<tr><td colspan="5" style="text-align:center;color:var(--error);padding:20px">Error al cargar facturas</td></tr>';
 
     }
 

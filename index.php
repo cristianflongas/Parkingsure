@@ -4,12 +4,9 @@
  * Landing page profesional con carrusel y sección de seguridad
  */
 
-// Si el usuario ya está logueado, redirigir al dashboard
+// La sesión se inicia para verificar estado, pero no se redirige automáticamente 
+// para permitir al usuario ver la página principal (Index) incluso si está logueado.
 session_start();
-if (isset($_SESSION['user'])) {
-    header('Location: dashboard.php');
-    exit();
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -18,663 +15,340 @@ if (isset($_SESSION['user'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ParkingSure - Sistema de Gestión de Parqueaderos</title>
     <meta name="description" content="Sistema profesional de gestión de parqueaderos con seguridad avanzada, control de accesos y facturación automática">
-    <meta name="keywords" content="parqueadero, gestión, seguridad, parking, sistema, control">
     
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="ParkingSure - Sistema de Gestión de Parqueaderos">
-    <meta property="og:description" content="Sistema profesional con seguridad avanzada y control total">
-    <meta property="og:type" content="website">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     
     <!-- Favicon -->
-    <link rel="shortcut icon" href="../../img/logo.png">
-    
-    <!-- CSS Principal -->
-    <link href="../style/ps-core.css" rel="stylesheet">
+    <link rel="shortcut icon" href="img/logo.png">
     
     <style>
-        /* Estilos adicionales para landing page */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-yellow: #ffd700;
+            --dark-black: #0a0a0a;
+            --text-black: #1a1a1a;
+            --bg-white: #ffffff;
+            --bg-light: #f8f9fa;
         }
-        
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #1a1a1a;
-            background: #fafafa;
-            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-black);
+            background-color: var(--bg-white);
         }
-        
-        /* Hero Section */
-        .hero {
-            height: 85vh;
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            position: relative;
-            display: flex;
+
+        /* Navbar Formal */
+        .navbar-formal {
+            background-color: var(--bg-white);
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            padding: 1rem 0;
+        }
+
+        .navbar-formal .navbar-brand {
+            font-weight: 900;
+            font-size: 1.8rem;
+            color: var(--dark-black);
+            letter-spacing: -0.5px;
+        }
+
+        .navbar-formal .logo-mark {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.05);
+            width: 40px;
+            height: 40px;
+            background: var(--primary-yellow);
+            border-radius: 50%;
+            margin-right: 10px;
+            font-size: 1.5rem;
+            color: var(--dark-black);
+            font-weight: 900;
+        }
+
+        /* Carousel Section */
+        .carousel-item {
+            height: 85vh;
+            min-height: 500px;
         }
         
-        /* Carrusel */
-        .carousel-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+        .carousel-item img {
+            object-fit: cover;
             height: 100%;
-            z-index: 1;
-        }
-        
-        .carousel {
-            position: relative;
             width: 100%;
-            height: 100%;
-            overflow: hidden;
         }
-        
-        .carousel-slide {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            transition: opacity 2s ease-in-out;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        
-        .carousel-slide.active {
-            opacity: 1;
-        }
-        
+
         .carousel-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.4);
-            z-index: 2;
-        }
-        
-        /* Contenido Principal */
-        .hero-content {
-            position: relative;
-            z-index: 10;
+            background: rgba(0, 0, 0, 0.65); /* Fondo oscuro para resaltar el texto y dar un toque más sobrio */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
             text-align: center;
-            color: #000;
-            padding: 1rem;
-            max-width: 600px;
-            animation: fadeInUp 1s ease-out;
-        }
-        
-        .logo-hero {
-            font-size: 3.2rem;
-            font-weight: 900;
-            margin-bottom: 1rem;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            letter-spacing: -0.5px;
-        }
-        
-        .logo-hero .logo-mark {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            background: #ffd700;
-            border-radius: 50%;
-            margin-right: 10px;
-            vertical-align: middle;
-            line-height: 50px;
-            font-size: 1.8rem;
             color: white;
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
-        }
-        
-        .logo-hero .logo-text {
-            display: inline-block;
-            vertical-align: middle;
-            color: var(--text-primary);
-        }
-        
-        .tagline {
-            font-size: 1.2rem;
-            margin-bottom: 1.2rem;
-            font-weight: 400;
-            text-shadow: none;
-            color: #2c3e50;
-            letter-spacing: 0.5px;
-        }
-        
-        .cta-button {
-            display: inline-block;
-            padding: 1rem 3rem;
-            background: linear-gradient(135deg, #ffd700 0%, #ffcc00 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            border: 2px solid transparent;
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.4);
-            background: #ffcc00;
-        }
-        
-        /* Elementos Decorativos */
-        .hero-decoration {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent 0%, #ffd700 10%, transparent 20%);
             z-index: 1;
         }
-        
-        .decoration-line {
-            height: 100%;
-            width: 1px;
-            background: linear-gradient(90deg, transparent, #ffd700 50%, transparent);
-            margin: 0 auto;
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Sección de Contenido */
-        .content-section {
-            padding: 2.5rem 2rem;
-            background: #fff;
-            min-height: 100vh;
+        .hero-title span {
+            color: var(--primary-yellow);
         }
-        
-        /* Sección de Seguridad */
-        .security-section {
-            padding: 2.5rem 2rem;
-            background: #fff;
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 2.5rem;
+            max-width: 800px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        .section-title {
-            text-align: center;
-            font-size: 1.8rem;
+
+        .btn-custom {
+            padding: 1rem 3rem;
+            background: var(--primary-yellow);
+            color: var(--dark-black);
             font-weight: 800;
-            margin-bottom: 0.6rem;
-            color: #000;
-        }
-        
-        .section-subtitle {
-            text-align: center;
-            font-size: 1rem;
-            color: #666;
-            margin-bottom: 2rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-        
-        .feature-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            text-align: center;
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        }
-        
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            display: block;
-        }
-        
-        .feature-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: #000;
-        }
-        
-        .feature-description {
-            color: #666;
-            line-height: 1.6;
-        }
-        
-        /* Sección de Beneficios */
-        .benefits {
-            background: #000;
-            color: #fff;
-            padding: 2rem 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .benefits::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-            pointer-events: none;
-        }
-        
-        .benefits-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            text-align: center;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .benefit-item {
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
+            border: 2px solid var(--primary-yellow);
+            text-decoration: none;
+            display: inline-block;
         }
-        
-        .benefit-item::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
+
+        .btn-custom:hover {
+            background: transparent;
+            color: var(--primary-yellow);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
         }
-        
-        .benefit-item:hover {
-            transform: translateY(-10px) scale(1.05);
-            background: rgba(255, 255, 255, 0.15);
-            border-color: var(--gold);
-            box-shadow: 0 20px 40px rgba(255, 215, 0, 0.3);
-        }
-        
-        .benefit-item:hover::before {
-            opacity: 1;
-        }
-        
-        .benefit-number {
-            font-size: 3rem;
+
+        /* Secciones de Contenido */
+        .section-title {
             font-weight: 900;
-            margin-bottom: 0.5rem;
-            color: var(--gold);
-            transition: all 0.3s ease;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            margin-bottom: 3rem;
             position: relative;
-            z-index: 2;
+            display: inline-block;
+            color: var(--dark-black);
         }
-        
-        .benefit-text {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .benefit-item:hover .benefit-number {
-            transform: scale(1.1);
-            text-shadow: 0 5px 15px rgba(255, 215, 0, 0.5);
-        }
-        
-        .benefit-item:hover .benefit-text {
-            opacity: 1;
-            transform: translateY(-2px);
-        }
-        
-        /* Footer */
-        .footer {
-            background: #000;
-            color: #fff;
-            padding: 1rem;
-            text-align: center;
-        }
-        
-        /* Animaciones */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .logo-hero {
-                font-size: 2.5rem;
-            }
-            
-            .logo-hero .logo-mark {
-                width: 60px;
-                height: 60px;
-                line-height: 60px;
-                font-size: 2rem;
-            }
-            
-            .tagline {
-                font-size: 1.2rem;
-            }
-            
-            .section-title {
-                font-size: 2rem;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            
-            .benefits-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        /* Indicadores del carrusel */
-        .carousel-indicators {
+
+        .section-title::after {
+            content: '';
             position: absolute;
-            bottom: 30px;
+            bottom: -10px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 10;
-            display: flex;
-            gap: 10px;
+            width: 60px;
+            height: 4px;
+            background: var(--primary-yellow);
         }
-        
-        .indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5);
-            cursor: pointer;
+
+        .feature-card {
+            padding: 2.5rem;
+            background: var(--bg-white);
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
             transition: all 0.3s ease;
+            height: 100%;
+            text-align: center;
         }
-        
-        .indicator.active {
-            background: var(--gold);
-            transform: scale(1.2);
+
+        .feature-card:hover {
+            box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+            border-color: var(--primary-yellow);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--dark-black);
+            margin-bottom: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            background: var(--bg-light);
+            border-radius: 50%;
+            border: 2px solid var(--primary-yellow);
+        }
+
+        /* Stats Section */
+        .stats-section {
+            background: var(--dark-black);
+            color: var(--bg-white);
+            padding: 5rem 0;
+            position: relative;
+        }
+
+        .stats-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 5px;
+            background: var(--primary-yellow);
+        }
+
+        .stat-item h3 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--primary-yellow);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-item p {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            margin: 0;
+        }
+
+        /* Footer */
+        footer {
+            background: #050505;
+            color: var(--bg-white);
+            padding: 2rem 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            .hero-subtitle {
+                font-size: 1.2rem;
+                padding: 0 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Hero Section Empresarial -->
-    <section class="hero">
-        <!-- Elemento decorativo superior -->
-        <div class="hero-decoration">
-            <div class="decoration-line"></div>
+
+    <!-- Header Formal -->
+    <nav class="navbar navbar-formal sticky-top">
+        <div class="container">
+            <a class="navbar-brand m-0" href="#">
+                <span class="logo-mark">P</span>
+                PARKING<span style="color: #666; font-weight: 400;">SURE</span>
+            </a>
+            <a href="views/usuarios/login.php" class="btn-custom" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Iniciar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- Carrusel Bootstrap -->
+    <div id="carouselExampleControls" class="carousel slide carousel-fade" data-bs-ride="carousel">
+        <!-- Overlay del Hero (Fijo sobre el carrusel) -->
+        <div class="carousel-overlay">
+            <h1 class="hero-title">Gestión <span>Profesional</span></h1>
+            <p class="hero-subtitle">Sistema seguro de administración de parqueaderos con control de accesos, facturación y monitoreo avanzado.</p>
+            <a href="views/usuarios/login.php" class="btn-custom">Acceder al Sistema</a>
+        </div>
+
+        <div class="carousel-inner">
+            <div class="carousel-item active" data-bs-interval="5000">
+                <img src="img/slider1.jpg" class="d-block w-100" alt="Instalaciones 1">
+            </div>
+            <div class="carousel-item" data-bs-interval="5000">
+                <img src="img/slider2.jpg" class="d-block w-100" alt="Instalaciones 2">
+            </div>
+            <div class="carousel-item" data-bs-interval="5000">
+                <img src="img/slider3.jpg" class="d-block w-100" alt="Instalaciones 3">
+            </div>
         </div>
         
-        <!-- Contenido Principal -->
-        <div class="hero-content">
-            <div class="logo-hero">
-                <span class="logo-mark">P</span>
-                <span class="logo-text">PARKING<em>SURE</em></span>
-            </div>
-            <p class="tagline">Gestión Profesional y Segura de Parqueaderos</p>
-            <a href="views/usuarios/login.php" class="cta-button">Iniciar Sesión</a>
-        </div>
-    </section>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="prev" style="z-index: 2;">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="next" style="z-index: 2;">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
 
-    <!-- Sección de Contenido -->
-    <section class="content-section">
-        <div class="container">
-            <h2 class="section-title">🔐 Seguridad Avanzada</h2>
-            <p class="section-subtitle">Protección total para tu parqueadero con tecnología de última generación</p>
+    <!-- Sección de Seguridad -->
+    <section class="py-5 bg-white">
+        <div class="container py-5 text-center">
+            <h2 class="section-title">Seguridad y Confianza</h2>
+            <p class="mb-5 text-muted mx-auto" style="max-width: 700px; font-size: 1.1rem;">
+                Protección total para tu parqueadero con tecnología de vanguardia. Nuestra plataforma garantiza la integridad de tus datos y agiliza todas las operaciones.
+            </p>
             
-            <div class="features-grid">
-                <div class="feature-card">
-                    <span class="feature-icon">🛡️</span>
-                    <h3 class="feature-title">Encriptación de Datos</h3>
-                    <p class="feature-description">Toda la información se encripta con los estándares más altos de seguridad, protegiendo datos de clientes y transacciones.</p>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <h4 class="fw-bold mb-3">Encriptación de Datos</h4>
+                        <p class="text-muted mb-0">Toda la información se encripta con los estándares más altos, protegiendo datos de clientes y transacciones de forma segura.</p>
+                    </div>
                 </div>
-                
-                <div class="feature-card">
-                    <span class="feature-icon">👤</span>
-                    <h3 class="feature-title">Control de Accesos</h3>
-                    <p class="feature-description">Sistema de roles y permisos granular que garantiza que solo personal autorizado acceda a funciones críticas.</p>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">👤</div>
+                        <h4 class="fw-bold mb-3">Control de Accesos</h4>
+                        <p class="text-muted mb-0">Sistema de roles y permisos granular que garantiza que solo personal autorizado acceda a las funciones críticas.</p>
+                    </div>
                 </div>
-                
-                <div class="feature-card">
-                    <span class="feature-icon">📊</span>
-                    <h3 class="feature-title">Auditoría Completa</h3>
-                    <p class="feature-description">Registro detallado de todas las operaciones con trazabilidad total para cumplir con normativas de seguridad.</p>
-                </div>
-                
-                <div class="feature-card">
-                    <span class="feature-icon">🔒</span>
-                    <h3 class="feature-title">Sesiones Seguras</h3>
-                    <p class="feature-description">Protección contra ataques de sesión con regeneración automática de tokens y timeouts configurables.</p>
-                </div>
-                
-                <div class="feature-card">
-                    <span class="feature-icon">💳</span>
-                    <h3 class="feature-title">Pagos Seguros</h3>
-                    <p class="feature-description">Procesamiento de pagos con validación múltiple y registro detallado de todas las transacciones.</p>
-                </div>
-                
-                <div class="feature-card">
-                    <span class="feature-icon">🚨</span>
-                    <h3 class="feature-title">Alertas en Tiempo Real</h3>
-                    <p class="feature-description">Notificaciones instantáneas de actividades sospechosas y monitoreo continuo del sistema.</p>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h4 class="fw-bold mb-3">Auditoría Completa</h4>
+                        <p class="text-muted mb-0">Registro detallado de todas las operaciones con trazabilidad total para cumplir con normativas de seguridad vigentes.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Sección de Beneficios -->
-    <section class="benefits">
+    <!-- Sección de Estadísticas/Beneficios -->
+    <section class="stats-section text-center">
         <div class="container">
-            <h2 class="section-title" style="color: white;">📈 ¿Por qué elegir ParkingSure?</h2>
-            
-            <div class="benefits-grid">
-                <div class="benefit-item">
-                    <div class="benefit-number">99.9%</div>
-                    <div class="benefit-text">Uptime garantizado</div>
+            <div class="row g-4">
+                <div class="col-md-3 col-6 stat-item">
+                    <h3 class="counter">99.9%</h3>
+                    <p>Uptime Garantizado</p>
                 </div>
-                
-                <div class="benefit-item">
-                    <div class="benefit-number">24/7</div>
-                    <div class="benefit-text">Soporte técnico</div>
+                <div class="col-md-3 col-6 stat-item">
+                    <h3 class="counter">24/7</h3>
+                    <p>Soporte Técnico</p>
                 </div>
-                
-                <div class="benefit-item">
-                    <div class="benefit-number">1000+</div>
-                    <div class="benefit-text">Vehículos gestionados</div>
+                <div class="col-md-3 col-6 stat-item">
+                    <h3 class="counter">1000+</h3>
+                    <p>Vehículos Gestionados</p>
                 </div>
-                
-                <div class="benefit-item">
-                    <div class="benefit-number">≤2s</div>
-                    <div class="benefit-text">Tiempo de respuesta</div>
+                <div class="col-md-3 col-6 stat-item">
+                    <h3 class="counter">≤2s</h3>
+                    <p>Tiempo de Respuesta</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="text-center">
         <div class="container">
-            <p>&copy; 2026 ParkingSure - Sistema Profesional de Gestión de Parqueaderos</p>
-            <p>Todos los derechos reservados | Seguridad y Confianza en cada Operación</p>
+            <p class="mb-1">&copy; <?php echo date('Y'); ?> ParkingSure - Sistema Profesional de Gestión de Parqueaderos</p>
+            <p class="mb-0 text-muted" style="font-size: 0.9rem;">Todos los derechos reservados | Seguridad y Confianza en cada Operación</p>
         </div>
     </footer>
 
-    <script>
-        // Carrusel automático
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.carousel-slide');
-        const indicators = document.querySelectorAll('.indicator');
-        const totalSlides = slides.length;
-
-        function changeSlide(index) {
-            // Remover clase active de slide actual
-            slides[currentSlide].classList.remove('active');
-            indicators[currentSlide].classList.remove('active');
-            
-            // Actualizar slide actual
-            currentSlide = index;
-            
-            // Agregar clase active al nuevo slide
-            slides[currentSlide].classList.add('active');
-            indicators[currentSlide].classList.add('active');
-        }
-
-        function nextSlide() {
-            const nextIndex = (currentSlide + 1) % totalSlides;
-            changeSlide(nextIndex);
-        }
-
-        // Carrusel automático cada 5 segundos
-        setInterval(nextSlide, 5000);
-
-        // Efecto parallax al hacer scroll
-        window.addEventListener('scroll', () => {
-            const scrolled = window.pageYOffset;
-            const hero = document.querySelector('.hero');
-            hero.style.transform = `translateY(${scrolled * 0.5}px)`;
-        });
-
-        // Animación de entrada para las tarjetas
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animation = 'fadeInUp 0.6s ease-out forwards';
-                }
-            });
-        }, observerOptions);
-
-        // Observar todas las tarjetas de características
-        document.querySelectorAll('.feature-card').forEach(card => {
-            observer.observe(card);
-        });
-
-        // Efectos interactivos adicionales
-        document.querySelectorAll('.benefit-item').forEach((item, index) => {
-            item.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-15px) scale(1.1) rotate(2deg)';
-            });
-            
-            item.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0) scale(1) rotate(0deg)';
-            });
-            
-            // Animación de contador
-            const number = this.querySelector('.benefit-number');
-            if (number) {
-                const finalValue = number.textContent;
-                let currentValue = 0;
-                const increment = parseFloat(finalValue) / 50;
-                
-                const countUp = () => {
-                    if (currentValue < parseFloat(finalValue)) {
-                        currentValue += increment;
-                        number.textContent = currentValue.toFixed(1) + (finalValue.includes('%') ? '%' : '+');
-                        setTimeout(countUp, 30);
-                    } else {
-                        number.textContent = finalValue;
-                    }
-                };
-                
-                // Iniciar animación cuando sea visible
-                const itemObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting && !number.dataset.animated) {
-                            number.dataset.animated = 'true';
-                            countUp();
-                        }
-                    });
-                }, { threshold: 0.5 });
-                
-                itemObserver.observe(item);
-            }
-        });
-
-        // Efecto de onda en el logo
-        const logoMark = document.querySelector('.logo-mark');
-        if (logoMark) {
-            logoMark.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.2) rotate(360deg)';
-                this.style.background = 'linear-gradient(45deg, #ffcc00, #ffd700)';
-            });
-            
-            logoMark.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1) rotate(0deg)';
-                this.style.background = 'var(--gold)';
-            });
-        }
-
-        // Efecto de escritura en el tagline
-        const tagline = document.querySelector('.tagline');
-        if (tagline) {
-            const text = tagline.textContent;
-            tagline.textContent = '';
-            let charIndex = 0;
-            
-            const typeWriter = () => {
-                if (charIndex < text.length) {
-                    tagline.textContent += text.charAt(charIndex);
-                    charIndex++;
-                    setTimeout(typeWriter, 100);
-                }
-            };
-            
-            // Iniciar animación cuando sea visible
-            const taglineObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting && !tagline.dataset.animated) {
-                        tagline.dataset.animated = 'true';
-                        typeWriter();
-                    }
-                });
-            }, { threshold: 0.5 });
-            
-            taglineObserver.observe(tagline);
-        }
-    </script>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

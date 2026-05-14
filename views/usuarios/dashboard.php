@@ -17,53 +17,41 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ParkingSure — Dashboard</title>
   <link rel="shortcut icon" href="../../img/logo.png">
-  <link href="style/ps-core.css" rel="stylesheet">
+  <link href="style/ps-core.css?v=2" rel="stylesheet">
   <style>
     .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
     .occupancy-bars { display: flex; flex-direction: column; gap: 14px; }
     .occ-item { }
-    .occ-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 7px; }
-    .occ-qty  { color: #ccc; font-size: 12px; font-weight: 400; }
-    .occ-track { height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
-    .occ-fill  { height: 100%; border-radius: 3px; background: #ffd700; transition: width .6s cubic-bezier(.4,0,.2,1); }
+    .occ-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 7px; }
+    .occ-qty  { color: var(--text-secondary); font-size: 12px; font-weight: 400; }
+    .occ-track { height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+    .occ-fill  { height: 100%; border-radius: 3px; background: var(--gold); transition: width .6s ease; }
 
     /* Entry/exit event list */
     .event-dot {
-      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-      box-shadow: 0 0 6px currentColor;
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
     }
-    .event-dot.in  { background: var(--text-secondary); color: var(--text-secondary); }
-    .event-dot.out { background: var(--text-muted);  color: var(--text-muted); }
+    .event-dot.in  { background: var(--success); }
+    .event-dot.out { background: var(--text-muted); }
 
     /* Live indicator */
     .live-pill {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: var(--surface-2); border: 1px solid var(--border-md);
-      border-radius: 20px; padding: 3px 10px;
-      font-size: 10px; font-weight: 700; letter-spacing: .8px;
-      color: var(--gold); text-transform: uppercase;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface-1); border: 1px solid var(--border-md);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      color: var(--text-primary); text-transform: uppercase;
     }
     .live-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--gold);
-      animation: pulse 1.8s ease infinite;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
     }
-    @keyframes pulse {
-      0%,100% { opacity:1; transform:scale(1);   }
-      50%      { opacity:.5; transform:scale(1.4); }
-    }
-
-    /* Stat card accent lines - Professional Monochrome */
-    .sc-total   { border-top: 2px solid var(--text-muted); }
-    .sc-free    { border-top: 2px solid var(--text-secondary); }
-    .sc-busy    { border-top: 2px solid var(--border-md); }
-    .sc-revenue { border-top: 2px solid var(--gold); }
 
     @media(max-width:900px){ .main-grid { grid-template-columns: 1fr; } }
     .stats-grid{
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
+      gap: 16px;
     }
   </style>
 </head>
@@ -97,6 +85,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       <div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div>
       <div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div>
     </div>
+    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>
@@ -112,23 +101,23 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   </div>
 
   <!-- Stat cards originales -->
-  <div class="stats-grid stats-grid-4" style="margin-bottom:24px">
-    <div class="stat-card sc-total">
+  <div class="stats-grid stats-grid-4" style="margin-bottom:28px">
+    <div class="stat-card">
       <div class="stat-label">Módulos Totales</div>
       <div class="stat-value" id="total-modulos">-</div>
       <div class="stat-sub">configurados</div>
     </div>
-    <div class="stat-card sc-grid">
+    <div class="stat-card">
       <div class="stat-label">Disponibles</div>
       <div class="stat-value" id="modulos-disponibles">-</div>
       <div class="stat-sub">libres ahora</div>
     </div>
-    <div class="stat-card sc-grid">
+    <div class="stat-card">
       <div class="stat-label">Ocupados</div>
       <div class="stat-value" id="modulos-ocupados">-</div>
       <div class="stat-sub">en uso</div>
     </div>
-    <div class="stat-card sc-revenue">
+    <div class="stat-card">
       <div class="stat-label">Ingresos Hoy</div>
       <div class="stat-value" id="ingresos-hoy">-</div>
       <div class="stat-sub">del día</div>
@@ -168,11 +157,8 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 
     <!-- Occupancy by type -->
     <div class="card">
-      
 
-      <hr class="divider">
-
-      <div class="card-title" style="margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:12px; border-bottom:none; padding-bottom:0;">
         <span class="card-title-icon">⚡</span>
         Accesos Rápidos
       </div>

@@ -17,7 +17,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ParkingSure — Parqueadero Virtual</title>
   <link rel="shortcut icon" href="../../img/logo.png">
-  <link href="style/ps-core.css" rel="stylesheet">
+  <link href="style/ps-core.css?v=2" rel="stylesheet">
   <style>
     /* Toolbar */
     .toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:20px; }
@@ -32,14 +32,6 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       border-radius: var(--r-xl);
       padding: 28px;
       position: relative;
-      overflow: hidden;
-    }
-    .lot-shell::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(232,184,75,.03) 0%, transparent 50%);
-      pointer-events: none;
     }
     .lot-header {
       display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px;
@@ -115,19 +107,18 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       top: 0;
       width: 100%;
       height: 100%;
-      background-color: transparent;
-      animation: fadeIn 0.3s;
+      background-color: rgba(0,0,0,0.5);
     }
     .modal.show { display: flex; align-items: center; justify-content: center; }
     .modal-content {
-      background: var(--surface-2);
+      background: var(--surface-1);
       border: 1px solid var(--border);
-      border-radius: var(--r-lg);
+      border-radius: var(--r-md);
       max-width: 500px;
       width: 90%;
       max-height: 90vh;
       overflow-y: auto;
-      animation: slideIn 0.3s;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
     .modal-header {
       display: flex;
@@ -227,10 +218,10 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       gap: 12px;
     }
     .vehiculo-placa {
-      background: var(--crimson);
+      background: var(--error);
       color: white;
       padding: 4px 8px;
-      border-radius: var(--r-xs);
+      border-radius: var(--r-sm);
       font-weight: 600;
       font-size: 12px;
     }
@@ -250,21 +241,13 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       color: var(--gold);
     }
     .btn-danger {
-      background: var(--crimson);
+      background: var(--error);
       color: white;
-      border: 1px solid var(--crimson);
+      border: 1px solid var(--error);
     }
     .btn-danger:hover {
-      background: #dc2626;
-      border-color: #dc2626;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    @keyframes slideIn {
-      from { transform: translateY(-20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      background: #b71c1c;
+      border-color: #b71c1c;
     }
 
     /* Grid de 4 columnas para estadísticas */
@@ -310,6 +293,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   <div class="nav-right">
     <div class="user-avatar"><?php echo htmlspecialchars(substr($_SESSION['nombre'] ?? 'U', 0, 1)); ?></div>
     <div class="user-info"><div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div><div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div></div>
+    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>

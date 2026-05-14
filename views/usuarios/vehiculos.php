@@ -9,7 +9,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ParkingSure — Vehículos</title>
   <link rel="shortcut icon" href="../../img/logo.png">
-  <link href="style/ps-core.css" rel="stylesheet">
+  <link href="style/ps-core.css?v=2" rel="stylesheet">
   <style>
     .layout { display:grid; grid-template-columns:1fr 1.8fr; gap:18px; align-items:start; }
     @media(max-width:860px){ .layout { grid-template-columns:1fr; } }
@@ -69,6 +69,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   <div class="nav-right">
     <div class="user-avatar"><?php echo htmlspecialchars(substr($_SESSION['nombre'] ?? 'U', 0, 1)); ?></div>
     <div class="user-info"><div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div><div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div></div>
+    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>
@@ -302,8 +303,8 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
         <div class="vc-model">${v.modelo}${v.color?' · '+v.color:''}</div>
         <div class="vc-owner">👤 ${v.owner}</div>
         <div class="vc-foot">
-          <span class="badge ${v.estado==='Activo'?'badge-emerald':'badge-crimson'} badge-dot">${v.estado}</span>
-          ${v.dentro?'<span class="badge badge-gold badge-dot" style="font-size:10px">En parqueadero</span>':''}
+          <span class="badge ${v.estado==='Activo'?'badge-success':'badge-danger'} badge-dot">${v.estado}</span>
+          ${v.dentro?'<span class="badge badge-warning badge-dot" style="font-size:10px">En parqueadero</span>':''}
         </div>`;
       d.onclick = () => openDet(realIdx);
       g.appendChild(d);
@@ -331,8 +332,8 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       <div class="info-row"><span class="ir-label">Color</span><span class="ir-value">${v.color||'—'}</span></div>
       <div class="info-row"><span class="ir-label">Propietario</span><span class="ir-value">${v.owner}</span></div>
       <div class="info-row"><span class="ir-label">Teléfono</span><span class="ir-value">${v.tel||'—'}</span></div>
-      <div class="info-row"><span class="ir-label">Estado</span><span class="ir-value"><span class="badge ${v.estado==='Activo'?'badge-emerald':'badge-crimson'} badge-dot">${v.estado}</span></span></div>
-      <div class="info-row"><span class="ir-label">En parqueadero</span><span class="ir-value">${v.dentro?'<span class="badge badge-gold badge-dot">Sí</span>':'No'}</span></div>`;
+      <div class="info-row"><span class="ir-label">Estado</span><span class="ir-value"><span class="badge ${v.estado==='Activo'?'badge-success':'badge-danger'} badge-dot">${v.estado}</span></span></div>
+      <div class="info-row"><span class="ir-label">En parqueadero</span><span class="ir-value">${v.dentro?'<span class="badge badge-warning badge-dot">Sí</span>':'No'}</span></div>`;
     document.getElementById('detToggleBtn').textContent = v.estado==='Activo'?'Desactivar':'Activar';
     switchToView();
     document.getElementById('detOverlay').classList.add('open');
