@@ -69,7 +69,6 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
   <div class="nav-right">
     <div class="user-avatar"><?php echo htmlspecialchars(substr($_SESSION['nombre'] ?? 'U', 0, 1)); ?></div>
     <div class="user-info"><div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div><div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div></div>
-    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>

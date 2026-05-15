@@ -7,7 +7,6 @@ $conn = $database->conectar();
 
 $usuario  = $_POST['usuario'];
 $password = $_POST['password'];
-$rol      = $_POST['rol'];
 
 // Busca el usuario en la BD por usuario (con JOIN para obtener el rol)
 $sql = "SELECT p.*, r.nombre_rol 

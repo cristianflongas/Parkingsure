@@ -286,13 +286,7 @@
       <form action="../../controllers/loginController.php" method="POST">
       <input type="hidden" name="action" value="login">
 
-        <div class="form-group">
-          <label class="form-label">Rol de acceso</label>
-          <select class="form-select" name="rol" id="rol">
-            <option value="ADMINISTRADOR">Administrador</option>
-            <option value="OPERADOR">Operador</option>
-          </select>
-        </div>
+
 
         <div class="form-group">
           <label class="form-label">Usuario</label>

@@ -92,7 +92,12 @@ session_start();
             flex-direction: column;
             text-align: center;
             color: white;
-            z-index: 1;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .carousel-overlay * {
+            pointer-events: auto;
         }
 
         .hero-title {
@@ -272,11 +277,11 @@ session_start();
             </div>
         </div>
         
-        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="prev" style="z-index: 2;">
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="prev" style="z-index: 20;">
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
             <span class="visually-hidden">Previous</span>
         </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="next" style="z-index: 2;">
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="next" style="z-index: 20;">
             <span class="carousel-control-next-icon" aria-hidden="true"></span>
             <span class="visually-hidden">Next</span>
         </button>

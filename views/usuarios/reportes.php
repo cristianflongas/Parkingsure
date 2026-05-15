@@ -99,7 +99,6 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       <div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div>
       <div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div>
     </div>
-    <a class="btn-logout" href="../../index.php" style="background:var(--surface-2);color:var(--text-secondary);border-color:var(--border-md);margin-right:8px;">Ver Web</a>
     <a class="btn-logout" href="../../controllers/logout.php">Salir</a>
   </div>
 </nav>
@@ -237,6 +236,7 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
   const API = '../../controllers/reportesapi.php';
@@ -761,686 +761,251 @@ function setPeriodoRapido() {
   }
 
   /* ════════════════════════════════════════
-     GENERAR REPORTE IMPRIMIBLE / PDF
+     GENERAR REPORTE IMPRIMIBLE / PDF (ACTUALIZADO)
   ════════════════════════════════════════ */
   function descargarReporte() {
     console.log('Iniciando generación de PDF descargable...');
     
-    // Capturar el contenido visible de la vista
-    const contenidoVisible = capturarContenidoVista();
-    
-    if (!contenidoVisible) {
-      toast('⚠️ No hay contenido visible para generar el PDF');
+    if (!datosResumen || datosDetalle.length === 0) {
+      toast('⚠️ No hay datos para generar el PDF');
       return;
     }
 
-    // Generar PDF descargable con jsPDF
-    generarPDFDescargable(contenidoVisible);
+    generarPDFDescargable(datosResumen, datosTipo, datosDetalle);
   }
 
-  function generarPDFDescargable(contenido) {
+  function generarPDFDescargable(resumen, tipos, detalles) {
     toast('🔄 Generando PDF profesional...');
     
-    // Crear instancia de jsPDF
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     
-    // Configuración de página
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
-    let yPosition = margin;
+    let yPos = margin;
     
-    // Colores blanco y negro formal con toques corporativos
     const colors = {
-      // Solo mantenemos el dorado para elementos decorativos mínimos
-      gold: [232, 184, 75],        // #e8b84b - Solo para PARKINGSURE y líneas decorativas
-      
-      // Esquema blanco y negro formal
-      black: [0, 0, 0],            // Negro puro para texto
-      white: [255, 255, 255],      // Blanco para fondos
-      lightGray: [240, 240, 240],  // Gris claro para fondos sutiles
-      mediumGray: [150, 150, 150], // Gris medio para bordes
-      darkGray: [100, 100, 100],   // Gris oscuro para texto secundario
-      
-      // Texto formal
-      text: [0, 0, 0],             // Negro para texto principal
-      textSecondary: [100, 100, 100], // Gris para texto secundario
-      textMuted: [150, 150, 150]   // Gris claro para texto muted
+      gold: [232, 184, 75],
+      black: [20, 20, 20],
+      white: [255, 255, 255],
+      gray: [100, 100, 100],
+      lightGray: [245, 245, 245],
+      border: [220, 220, 220]
     };
     
-    // Función para agregar texto con salto de página automático
-    function addText(text, fontSize = 12, fontStyle = 'normal', color = colors.text) {
-      doc.setTextColor(...color);
-      doc.setFontSize(fontSize);
-      doc.setFont('helvetica', fontStyle);
-      
-      const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
-      lines.forEach(line => {
-        if (yPosition > pageHeight - margin) {
-          doc.addPage();
-          yPosition = margin;
-          // Agregar encabezado en nueva página
-          addHeader();
-        }
-        doc.text(line, margin, yPosition);
-        yPosition += fontSize * 0.4;
-      });
-      return yPosition;
-    }
-    
-    // Función para agregar encabezado en cada página
-    function addHeader() {
-      // Línea decorativa superior dorada (único toque corporativo)
+    const drawHeader = (doc) => {
+      doc.setFillColor(...colors.black);
+      doc.rect(0, 0, pageWidth, 5, 'F');
       doc.setFillColor(...colors.gold);
-      doc.rect(margin, 5, pageWidth - 2 * margin, 1.5, 'F');
+      doc.rect(0, 5, pageWidth, 1.5, 'F');
       
-      // Logo PARKINGSURE con toque dorado mínimo
       doc.setTextColor(...colors.black);
-      doc.setFontSize(18);
+      doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.text('PARKING', margin, 15);
+      doc.text('PARKING', margin, 20);
       
       doc.setTextColor(...colors.gold);
-      doc.text('SURE', margin + 29, 15);
+      doc.text('SURE', margin + 37, 20);
       
-      // Línea de separación negra formal
-      doc.setDrawColor(...colors.black);
+      doc.setTextColor(...colors.gray);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('REPORTE DE OPERACIONES', pageWidth - margin, 18, { align: 'right' });
+      
+      const fechaInicio = document.getElementById('fechaInicio').value;
+      const fechaFin = document.getElementById('fechaFin').value;
+      const labelRango = getLabelRango(fechaInicio, fechaFin);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Período: ${labelRango.charAt(0).toUpperCase() + labelRango.slice(1)}`, pageWidth - margin, 23, { align: 'right' });
+    };
+
+    const drawFooter = (doc, pageNumber, totalPages) => {
+      const footerY = pageHeight - 15;
+      
+      doc.setDrawColor(...colors.border);
       doc.setLineWidth(0.5);
-      doc.line(margin, 20, pageWidth - margin, 20);
+      doc.line(margin, footerY, pageWidth - margin, footerY);
       
-      yPosition = 28;
-    }
+      doc.setTextColor(...colors.gray);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.text('ParkingSure - Sistema de Gestión de Parqueadero', margin, footerY + 5);
+      
+      const fechaActual = new Date().toLocaleString('es-CO');
+      doc.text(`Generado el: ${fechaActual}`, margin, footerY + 10);
+      
+      if (totalPages) {
+        doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - margin, footerY + 5, { align: 'right' });
+      }
+    };
     
-    // Encabezado principal
-    addHeader();
+    drawHeader(doc);
+    yPos = 35;
     
-    // Información del reporte en formato formal
-    doc.setTextColor(...colors.darkGray);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text('SISTEMA DE GESTIÓN DE PARQUEADERO', margin, yPosition);
-    yPosition += 8;
-    
-    const fechaActual = new Date().toLocaleDateString('es-CO', { 
-      day: '2-digit', month: 'long', year: 'numeric' 
-    });
-    const horaActual = new Date().toLocaleTimeString('es-CO', { 
-      hour: '2-digit', minute: '2-digit' 
-    });
-    doc.text(`Reporte generado: ${fechaActual} - ${horaActual}hs`, margin, yPosition);
-    yPosition += 12;
-    
-    // Título del reporte - primero el recuadro, luego el texto
-    const tituloY = yPosition;
-    
-    // Preparar el texto y calcular altura necesaria
-    const tituloTexto = contenido.subtitulo.toUpperCase();
-    const lines = doc.splitTextToSize(tituloTexto, pageWidth - 2 * margin - 10);
-    const tituloHeight = Math.max(15, lines.length * 6 + 8);
-    
-    // Dibujar el recuadro primero
-    doc.setFillColor(...colors.white);
-    doc.rect(margin, tituloY - 3, pageWidth - 2 * margin, tituloHeight, 'F');
-    doc.setDrawColor(...colors.black);
-    doc.setLineWidth(0.5);
-    doc.rect(margin, tituloY - 3, pageWidth - 2 * margin, tituloHeight);
-    
-    // Escribir el texto encima del recuadro
     doc.setTextColor(...colors.black);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
+    doc.text('RESUMEN EJECUTIVO', margin, yPos);
     
-    lines.forEach((line, index) => {
-      doc.text(line, margin + 5, tituloY + 8 + (index * 6));
-    });
-    
-    // Actualizar posición Y después del título
-    yPosition = tituloY + tituloHeight + 8;
-    
-    // Sección de estadísticas con diseño mejorado
-    yPosition += 5;
-    doc.setTextColor(...colors.text);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    yPosition = addText('RESUMEN EJECUTIVO', 14, 'bold', colors.text);
-    yPosition += 5;
-    
-    // Estadísticas en tarjetas formales blanco y negro
-    const stats = [
-      { label: 'Total Ingresos', value: contenido.estadisticas.ingresos },
-      { label: 'Vehículos Atendidos', value: contenido.estadisticas.vehiculos },
-      { label: 'Tiempo Promedio', value: contenido.estadisticas.tiempo },
-      { label: 'Mejor Servicio', value: contenido.estadisticas.mejor }
-    ];
-    
-    const boxWidth = (pageWidth - 2 * margin) / 4 - 3;
-    const boxHeight = 26;
-    const spacing = 3;
-    
-    stats.forEach((stat, index) => {
-      const x = margin + index * (boxWidth + spacing);
-      
-      // Fondo blanco
-      doc.setFillColor(...colors.white);
-      doc.rect(x, yPosition, boxWidth, boxHeight, 'F');
-      
-      // Borde negro formal
-      doc.setDrawColor(...colors.black);
-      doc.setLineWidth(0.5);
-      doc.rect(x, yPosition, boxWidth, boxHeight);
-      
-      // Borde superior dorado (único toque corporativo)
-      doc.setFillColor(...colors.gold);
-      doc.rect(x, yPosition, boxWidth, 1.5, 'F');
-      
-      // Valor principal en negro
-      doc.setTextColor(...colors.black);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(stat.value, x + boxWidth/2, yPosition + 12, { align: 'center' });
-      
-      // Línea separadora gris
-      doc.setDrawColor(...colors.mediumGray);
-      doc.setLineWidth(0.3);
-      doc.line(x + 4, yPosition + 16, x + boxWidth - 4, yPosition + 16);
-      
-      // Etiqueta en gris
-      doc.setTextColor(...colors.darkGray);
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'normal');
-      doc.text(stat.label.toUpperCase(), x + boxWidth/2, yPosition + 22, { align: 'center' });
-    });
-    
-    yPosition += boxHeight + 15;
-    
-    // Sección de análisis por tipo de servicio
-    if (contenido.datosBarras.length > 0) {
-      yPosition += 8;
-      doc.setTextColor(...colors.black);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      yPosition = addText('ANÁLISIS POR TIPO DE SERVICIO', 12, 'bold', colors.black);
-      yPosition += 6;
-      
-      // Fondo blanco para la sección
-      const sectionHeight = contenido.datosBarras.length * 6 + 10;
-      doc.setFillColor(...colors.white);
-      doc.rect(margin, yPosition - 2, pageWidth - 2 * margin, sectionHeight, 'F');
-      doc.setDrawColor(...colors.black);
-      doc.setLineWidth(0.5);
-      doc.rect(margin, yPosition - 2, pageWidth - 2 * margin, sectionHeight);
-      
-      contenido.datosBarras.forEach((dato, index) => {
-        doc.setTextColor(...colors.black);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        yPosition = addText(`• ${dato}`, 9, 'normal', colors.black);
-        yPosition += 2;
-      });
-      yPosition += 12;
-    }
-    
-    // Tabla de transacciones formal blanco y negro
-    if (contenido.filasDetalle.length > 0) {
-      yPosition += 8;
-      doc.setTextColor(...colors.black);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      yPosition = addText('DETALLE DE TRANSACCIONES', 12, 'bold', colors.black);
-      yPosition += 6;
-      
-      // Encabezados de tabla formales
-      const headers = ['HORA', 'PLACA', 'SERVICIO', 'MÓDULO', 'DURACIÓN', 'MONTO', 'ESTADO'];
-      const colWidth = (pageWidth - 2 * margin) / headers.length;
-      
-      // Fondo de encabezados blanco con borde negro
-      doc.setFillColor(...colors.white);
-      doc.rect(margin, yPosition, pageWidth - 2 * margin, 8, 'F');
-      doc.setDrawColor(...colors.black);
-      doc.setLineWidth(0.5);
-      doc.rect(margin, yPosition, pageWidth - 2 * margin, 8);
-      
-      // Encabezados con texto negro
-      headers.forEach((header, index) => {
-        const x = margin + index * colWidth;
-        doc.setTextColor(...colors.black);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'bold');
-        doc.text(header, x + colWidth/2, yPosition + 5, { align: 'center' });
-      });
-      yPosition += 8;
-      
-      // Filas de datos con diseño formal
-      contenido.filasDetalle.forEach((fila, rowIndex) => {
-        if (yPosition > pageHeight - margin - 25) {
-          doc.addPage();
-          yPosition = margin;
-          addHeader();
-          
-          // Repetir encabezados en nueva página
-          doc.setFillColor(...colors.white);
-          doc.rect(margin, yPosition, pageWidth - 2 * margin, 8, 'F');
-          doc.setDrawColor(...colors.black);
-          doc.setLineWidth(0.5);
-          doc.rect(margin, yPosition, pageWidth - 2 * margin, 8);
-          headers.forEach((header, index) => {
-            const x = margin + index * colWidth;
-            doc.setTextColor(...colors.black);
-            doc.setFontSize(7);
-            doc.setFont('helvetica', 'bold');
-            doc.text(header, x + colWidth/2, yPosition + 5, { align: 'center' });
-          });
-          yPosition += 8;
-        }
-        
-        // Fondo blanco para todas las filas
-        doc.setFillColor(...colors.white);
-        doc.rect(margin, yPosition, pageWidth - 2 * margin, 6, 'F');
-        
-        // Borde negro formal
-        doc.setDrawColor(...colors.black);
-        doc.setLineWidth(0.3);
-        doc.rect(margin, yPosition, pageWidth - 2 * margin, 6);
-        
-        // Datos de la fila en negro
-        fila.forEach((dato, index) => {
-          const x = margin + index * colWidth;
-          
-          // Todo el texto en negro
-          doc.setTextColor(...colors.black);
-          doc.setFontSize(6);
-          doc.setFont('helvetica', 'normal');
-          
-          // Alineación específica por columna
-          let align = 'left';
-          let xPos = x + 2;
-          
-          if (index === 0) { // Hora - centrado
-            align = 'center';
-            xPos = x + colWidth/2;
-          } else if (index === 5) { // Monto - derecha
-            align = 'right';
-            xPos = x + colWidth - 2;
-          } else if (index === 6) { // Estado - centrado
-            align = 'center';
-            xPos = x + colWidth/2;
-          }
-          
-          doc.text(dato.toString(), xPos, yPosition + 4, { align: align });
-        });
-        yPosition += 6;
-      });
-      yPosition += 10;
-    }
-    
-    // Footer formal blanco y negro
-    yPosition = pageHeight - 18;
-    
-    // Línea dorada del footer (único toque corporativo)
     doc.setDrawColor(...colors.gold);
     doc.setLineWidth(0.8);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 6;
+    doc.line(margin, yPos + 2, margin + 55, yPos + 2);
     
-    // Información del footer en negro y gris
-    doc.setTextColor(...colors.darkGray);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'italic');
-    doc.text('PARKINGSURE - SISTEMA DE GESTIÓN DE PARQUEADERO', pageWidth/2, yPosition, { align: 'center' });
-    yPosition += 4;
+    yPos += 12;
     
-    doc.setTextColor(...colors.mediumGray);
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Reporte generado automáticamente - Documento confidencial', pageWidth/2, yPosition, { align: 'center' });
+    const boxWidth = (pageWidth - 2 * margin - 15) / 4;
+    const boxHeight = 22;
     
-    // Número de página en gris
-    const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
-    doc.setTextColor(...colors.mediumGray);
-    doc.setFontSize(6);
-    doc.text(`Pág. ${pageNumber}`, pageWidth - margin - 5, pageHeight - 8);
+    const stats = [
+      { label: 'INGRESOS', value: fmt(resumen.ingresos || 0) },
+      { label: 'VEHÍCULOS', value: resumen.vehiculos || 0 },
+      { label: 'TIEMPO PROM.', value: resumen.tiempo_prom || '—' },
+      { label: 'MEJOR SERVICIO', value: resumen.mejor_servicio || '—' }
+    ];
     
-    // Generar nombre de archivo
-    const hoyLocal = new Date();
-    const fechaInicio = document.getElementById('fechaInicio').value || hoyLocal.getFullYear() + '-' + 
-                 String(hoyLocal.getMonth() + 1).padStart(2, '0') + '-' + 
-                 String(hoyLocal.getDate()).padStart(2, '0');
-    const fechaFin = document.getElementById('fechaFin').value || hoyLocal.getFullYear() + '-' + 
-                 String(hoyLocal.getMonth() + 1).padStart(2, '0') + '-' + 
-                 String(hoyLocal.getDate()).padStart(2, '0');
-    const fileName = `reporte_parkingsure_${fechaInicio}_${fechaFin}.pdf`;
+    stats.forEach((stat, i) => {
+      const x = margin + i * (boxWidth + 5);
+      
+      doc.setFillColor(...colors.white);
+      doc.setDrawColor(...colors.border);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(x, yPos, boxWidth, boxHeight, 2, 2, 'FD');
+      
+      doc.setFillColor(...colors.gold);
+      doc.roundedRect(x, yPos, boxWidth, 2, 2, 2, 'F');
+      doc.rect(x, yPos + 1, boxWidth, 1, 'F');
+      
+      doc.setTextColor(...colors.black);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      
+      let textWidth = doc.getTextWidth(stat.value.toString());
+      if (textWidth > boxWidth - 4) {
+        doc.setFontSize(9);
+      }
+      doc.text(stat.value.toString(), x + boxWidth / 2, yPos + 12, { align: 'center' });
+      
+      doc.setTextColor(...colors.gray);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(stat.label, x + boxWidth / 2, yPos + 18, { align: 'center' });
+    });
     
-    // Descargar el PDF
-    doc.save(fileName);
+    yPos += boxHeight + 15;
     
-    toast('✅ PDF descargado correctamente');
-  }
-
-  function capturarContenidoVista() {
-    // Capturar las estadísticas principales
-    const estadisticas = {
-      ingresos: document.getElementById('rIngresos')?.textContent || '0',
-      vehiculos: document.getElementById('rVehiculos')?.textContent || '0',
-      tiempo: document.getElementById('rTiempo')?.textContent || '—',
-      mejor: document.getElementById('rMejor')?.textContent || '—'
-    };
-
-    // Capturar el subtítulo con el rango de fechas
-    const subtitulo = document.getElementById('subtitulo')?.textContent || 'Reporte';
-    
-    // Capturar la tabla de detalle si existe
-    const tablaDetalle = document.getElementById('repTable');
-    let filasDetalle = [];
-    
-    if (tablaDetalle) {
-      const filas = tablaDetalle.querySelectorAll('tr');
-      filas.forEach(fila => {
-        const celdas = fila.querySelectorAll('td');
-        if (celdas.length > 0) {
-          const datosFila = [];
-          celdas.forEach(celda => {
-            datosFila.push(celda.textContent.trim());
-          });
-          filasDetalle.push(datosFila);
+    if (tipos && tipos.length > 0) {
+      doc.setTextColor(...colors.black);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INGRESOS POR TIPO DE SERVICIO', margin, yPos);
+      
+      doc.setDrawColor(...colors.gold);
+      doc.setLineWidth(0.8);
+      doc.line(margin, yPos + 2, margin + 85, yPos + 2);
+      
+      yPos += 8;
+      
+      const tableDataTipos = tipos.map(t => [
+        t.tipo,
+        t.cantidad.toString(),
+        fmt(t.ingresos),
+        `${t.pct}%`
+      ]);
+      
+      doc.autoTable({
+        startY: yPos,
+        head: [['Tipo de Servicio', 'Vehículos', 'Ingresos', 'Porcentaje']],
+        body: tableDataTipos,
+        theme: 'plain',
+        headStyles: { fillColor: colors.black, textColor: colors.white, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 9, textColor: colors.black },
+        alternateRowStyles: { fillColor: colors.lightGray },
+        margin: { left: margin, right: margin },
+        styles: { cellPadding: 3 },
+        columnStyles: {
+          1: { halign: 'center' },
+          2: { halign: 'right' },
+          3: { halign: 'center' }
         }
       });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
     }
-
-    // Capturar las barras de gráficos si existen
-    const barrasChart = document.getElementById('barsChart');
-    let datosBarras = [];
     
-    if (barrasChart) {
-      const barras = barrasChart.querySelectorAll('.bar-row');
-      barras.forEach(barra => {
-        const texto = barra.textContent?.trim();
-        if (texto) {
-          datosBarras.push(texto);
-        }
-      });
-    }
-
-    return {
-      estadisticas,
-      subtitulo,
-      filasDetalle,
-      datosBarras
-    };
-  }
-
-  function generarHTMLParaPDF(contenido) {
-    const fechaActual = new Date().toLocaleDateString('es-CO');
-    const horaActual = new Date().toLocaleTimeString('es-CO');
-    
-    let html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Reporte ParkingSure</title>
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
-            color: #000; 
-            font-size: 12px;
-          }
-          .header { 
-            text-align: center; 
-            border-bottom: 2px solid #000; 
-            padding-bottom: 15px; 
-            margin-bottom: 20px; 
-          }
-          .logo { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
-          }
-          .logo span { color: #b8860b; }
-          .fecha { 
-            font-size: 11px; 
-            color: #666; 
-            margin-top: 5px; 
-          }
-          .titulo { 
-            font-size: 16px; 
-            font-weight: bold; 
-            text-align: center; 
-            margin-bottom: 20px; 
-          }
-          .estadisticas { 
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 15px; 
-            margin-bottom: 25px; 
-          }
-          .stat-box { 
-            border: 1px solid #ccc; 
-            padding: 10px; 
-            text-align: center; 
-            border-radius: 5px; 
-          }
-          .stat-value { 
-            font-size: 18px; 
-            font-weight: bold; 
-            color: #b8860b; 
-            margin-bottom: 3px; 
-          }
-          .stat-label { 
-            font-size: 10px; 
-            color: #666; 
-          }
-          .seccion { 
-            font-size: 14px; 
-            font-weight: bold; 
-            border-bottom: 1px solid #ccc; 
-            padding-bottom: 5px; 
-            margin: 20px 0 10px; 
-          }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-bottom: 20px; 
-          }
-          th, td { 
-            border: 1px solid #ddd; 
-            padding: 8px; 
-            text-align: left; 
-          }
-          th { 
-            background-color: #f5f5f5; 
-            font-weight: bold; 
-          }
-          .footer { 
-            text-align: center; 
-            margin-top: 30px; 
-            font-size: 10px; 
-            color: #666; 
-            border-top: 1px solid #ccc; 
-            padding-top: 10px; 
-          }
-          @media print {
-            body { margin: 10px; }
-            .estadisticas { grid-template-columns: repeat(2, 1fr); }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">PARKING<span>SURE</span></div>
-          <div class="fecha">Generado el ${fechaActual} a las ${horaActual}</div>
-        </div>
+    if (detalles && detalles.length > 0) {
+      if (yPos > pageHeight - 40) {
+        doc.addPage();
+        drawHeader(doc);
+        yPos = 35;
+      }
+      
+      doc.setTextColor(...colors.black);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DETALLE DE TRANSACCIONES', margin, yPos);
+      
+      doc.setDrawColor(...colors.gold);
+      doc.setLineWidth(0.8);
+      doc.line(margin, yPos + 2, margin + 75, yPos + 2);
+      
+      yPos += 8;
+      
+      const tableDataDetalle = detalles.map(d => {
+        let estado = 'Pendiente';
+        if (!d.fecha_hora_salida) estado = 'En curso';
+        else if (d.estado_pago === 'PAGADA') estado = 'Pagado';
         
-        <div class="titulo">${contenido.subtitulo}</div>
-        
-        <div class="estadisticas">
-          <div class="stat-box">
-            <div class="stat-value">${contenido.estadisticas.ingresos}</div>
-            <div class="stat-label">Total Ingresos</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">${contenido.estadisticas.vehiculos}</div>
-            <div class="stat-label">Vehículos Atendidos</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">${contenido.estadisticas.tiempo}</div>
-            <div class="stat-label">Tiempo Promedio</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">${contenido.estadisticas.mejor}</div>
-            <div class="stat-label">Mejor Servicio</div>
-          </div>
-        </div>
-    `;
-
-    // Agregar datos de barras si existen
-    if (contenido.datosBarras.length > 0) {
-      html += `
-        <div class="seccion">Ingresos por Tipo de Servicio</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Tipo de Servicio</th>
-              <th>Ingresos</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      
-      contenido.datosBarras.forEach(dato => {
-        html += `<tr><td>${dato}</td></tr>`;
+        return [
+          fmtH(d.fecha_hora_entrada),
+          d.placa,
+          d.tipo,
+          d.modulo,
+          d.duracion || '—',
+          d.monto_total ? fmt(d.monto_total) : '—',
+          estado
+        ];
       });
       
-      html += `
-          </tbody>
-        </table>
-      `;
-    }
-
-    // Agregar tabla de detalle si existe
-    if (contenido.filasDetalle.length > 0) {
-      html += `
-        <div class="seccion">Detalle de Transacciones</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Hora</th>
-              <th>Placa</th>
-              <th>Tipo</th>
-              <th>Módulo</th>
-              <th>Duración</th>
-              <th>Monto</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      
-      contenido.filasDetalle.forEach(fila => {
-        html += '<tr>';
-        fila.forEach(dato => {
-          html += `<td>${dato}</td>`;
-        });
-        html += '</tr>';
-      });
-      
-      html += `
-          </tbody>
-        </table>
-      `;
-    }
-
-    html += `
-        <div class="footer">
-          ParkingSure · Sistema de Gestión de Parqueadero · Reporte generado automáticamente
-        </div>
-      </body>
-      </html>
-    `;
-
-    return html;
-  }
-
-  function generarPDFConDatosPrueba() {
-    console.log('Generando PDF con datos de prueba...');
-    
-    // Datos de prueba
-    const datosPrueba = {
-      resumen: {
-        ingresos: 1500000,
-        vehiculos: 25,
-        tiempo_prom: '2h 30m',
-        mejor_servicio: 'Estándar'
-      },
-      tipo: [
-        { tipo: 'Estándar', cantidad: 15, ingresos: 750000 },
-        { tipo: 'Premium', cantidad: 8, ingresos: 600000 },
-        { tipo: 'VIP', cantidad: 2, ingresos: 150000 }
-      ],
-      detalle: [
-        {
-          fecha_hora_entrada: '2024-01-15 08:30:00',
-          placa: 'ABC123',
-          tipo: 'Estándar',
-          modulo: 'A1',
-          duracion: '2h 15m',
-          monto_total: 50000,
-          estado_pago: 'PAGADA'
+      doc.autoTable({
+        startY: yPos,
+        head: [['Hora', 'Placa', 'Servicio', 'Módulo', 'Duración', 'Monto', 'Estado']],
+        body: tableDataDetalle,
+        theme: 'grid',
+        headStyles: { fillColor: colors.black, textColor: colors.white, fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8, textColor: colors.black },
+        alternateRowStyles: { fillColor: colors.lightGray },
+        margin: { left: margin, right: margin, top: 35, bottom: 25 },
+        styles: { cellPadding: 2.5, lineColor: colors.border, lineWidth: 0.1 },
+        columnStyles: {
+          0: { halign: 'center' },
+          1: { fontStyle: 'bold', halign: 'center' },
+          4: { halign: 'center' },
+          5: { halign: 'right', fontStyle: 'bold' },
+          6: { halign: 'center' }
         },
-        {
-          fecha_hora_entrada: '2024-01-15 10:45:00',
-          placa: 'XYZ789',
-          tipo: 'Premium',
-          modulo: 'B2',
-          duracion: '1h 30m',
-          monto_total: 75000,
-          estado_pago: 'PAGADA'
+        didDrawPage: function(data) {
+          if (data.pageNumber > 1) {
+            drawHeader(doc);
+          }
         }
-      ]
-    };
-
-    // Usar datos de prueba para generar el PDF
+      });
+    }
+    
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      drawFooter(doc, i, totalPages);
+    }
+    
     const fechaInicio = document.getElementById('fechaInicio').value || new Date().toISOString().split('T')[0];
     const fechaFin = document.getElementById('fechaFin').value || new Date().toISOString().split('T')[0];
-    const fechaLabel = getLabelRango(fechaInicio, fechaFin);
-
-    // Rellenar encabezado
-    document.getElementById('rpFecha').textContent = `Reporte ${fechaLabel} (DATOS DE PRUEBA)`;
-
-    // Estadísticas
-    document.getElementById('rpStats').innerHTML = `
-      <div class="rp-stat"><div class="rp-stat-val">${fmt(datosPrueba.resumen.ingresos)}</div><div class="rp-stat-lbl">Total Ingresos</div></div>
-      <div class="rp-stat"><div class="rp-stat-val">${datosPrueba.resumen.vehiculos}</div><div class="rp-stat-lbl">Vehículos Atendidos</div></div>
-      <div class="rp-stat"><div class="rp-stat-val">${datosPrueba.resumen.tiempo_prom}</div><div class="rp-stat-lbl">Tiempo Promedio</div></div>
-      <div class="rp-stat"><div class="rp-stat-val">${datosPrueba.resumen.mejor_servicio}</div><div class="rp-stat-lbl">Mejor Servicio</div></div>`;
-
-    // Tabla por tipo
-    const tbTipo = document.querySelector('#rpTipoTable tbody');
-    tbTipo.innerHTML = '';
-    datosPrueba.tipo.forEach(r => {
-      tbTipo.innerHTML += `<tr><td>${r.tipo}</td><td>${r.cantidad}</td><td>${fmt(r.ingresos)}</td></tr>`;
-    });
-
-    // Tabla detalle
-    const tbDet = document.querySelector('#rpDetalleTable tbody');
-    tbDet.innerHTML = '';
-    datosPrueba.detalle.forEach(r => {
-      tbDet.innerHTML += `<tr>
-        <td>${fmtH(r.fecha_hora_entrada)}</td>
-        <td>${r.placa}</td>
-        <td>${r.tipo}</td>
-        <td>${r.modulo}</td>
-        <td>${r.duracion}</td>
-        <td>${fmt(r.monto_total)}</td>
-        <td>${r.estado_pago}</td>
-      </tr>`;
-    });
-
-    console.log('PDF con datos de prueba listo para imprimir');
-    toast('📄 Generando PDF con datos de prueba...');
+    const fileName = `Reporte_ParkingSure_${fechaInicio}_al_${fechaFin}.pdf`;
     
-    // Imprimir
-    window.print();
+    doc.save(fileName);
+    toast('✅ PDF descargado correctamente');
   }
 
   /* ── Toast ── */

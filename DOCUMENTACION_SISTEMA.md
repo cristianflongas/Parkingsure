@@ -790,10 +790,12 @@ html2canvas + jsPDF → Generación y descarga
 ## 📝 NOTAS ADICIONALES
 
 ### Mejoras Recientes (Mayo 2026)
-1. **Sistema de Fechas Locales**: Detección automática sin ajustes manuales
-2. **Períodos Rápidos Corregidos**: Cálculo correcto de semana y todos los períodos
-3. **Reportes Optimizados**: Sin bucles infinitos y con logging detallado
-4. **Zona Horaria Automática**: Funciona en cualquier zona horaria sin configuración
+1. **Rediseño UI/UX (Light Corporate)**: Migración completa de toda la interfaz del sistema de un tema oscuro a uno claro y formal, mejorando la legibilidad e inspirando confianza institucional.
+2. **Login Inteligente**: Eliminación del selector de rol en el acceso; el sistema ahora detecta automáticamente el rol (`ADMINISTRADOR` u `OPERADOR`) validando contra la base de datos de manera segura.
+3. **Navegación Fluida**: Se añadió la opción "Ver Web" en todas las vistas internas y el cierre de sesión redirige automáticamente al Landing Page (`index.php`), creando un flujo conectado entre la web pública y el sistema.
+4. **Landing Page Renovada**: Integración de Bootstrap 5 en el `index.php` principal con un carrusel dinámico, overlay fijo de bienvenida y presentación formal del parqueadero.
+5. **Sistema de Fechas Locales**: Detección automática sin ajustes manuales.
+6. **Reportes Optimizados**: Sin bucles infinitos y con logging detallado.
 
 ### Mejoras Futuras
 1. **Notificaciones Push**: WebSocket para actualizaciones en tiempo real
@@ -810,6 +812,6 @@ html2canvas + jsPDF → Generación y descarga
 
 ---
 
-*Documentación actualizada: 10 de Mayo de 2026*
-*Versión del sistema: v3.0*
+*Documentación actualizada: 14 de Mayo de 2026*
+*Versión del sistema: v3.1*
 *Estado: Producción estable*
