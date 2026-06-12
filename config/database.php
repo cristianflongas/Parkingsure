@@ -49,3 +49,9 @@ class Database {
         return $this->conn;
     }
 }
+
+// Función helper global para obtener conexión PDO de forma directa
+function getDB() {
+    $db = new Database();
+    return $db->conectar();
+}

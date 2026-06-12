@@ -85,7 +85,8 @@ $rolUsuario = $_SESSION['rol'] ?? 'OPERADOR';
       <div class="u-name"><?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Usuario'); ?></div>
       <div class="u-role"><?php echo htmlspecialchars($_SESSION['rol'] ?? 'Operador'); ?></div>
     </div>
-    <a class="btn-logout" href="../../controllers/cerrar.php">Salir</a>
+    <a class="btn-logout" href="../../controllers/logout.php">Salir</a> 
+    
   </div>
 </nav>
 

@@ -105,6 +105,10 @@ if ($_SESSION['rol'] !== 'ADMINISTRADOR') {
     <div class="alert alert-success" style="margin-bottom:18px">✅ Usuario creado correctamente</div>
   <?php endif; ?>
 
+  <?php if(isset($_GET['error'])): ?>
+    <div class="alert alert-error" style="margin-bottom:18px">❌ Error: <?php echo htmlspecialchars($_GET['error']); ?></div>
+  <?php endif; ?>
+
   <!-- ── Stats ──────────────────────────────────────────────────────────────── -->
   <div class="stats-grid stats-grid-3" style="margin-bottom:20px">
 
@@ -174,26 +178,10 @@ if ($_SESSION['rol'] !== 'ADMINISTRADOR') {
 
   <!-- ── Grid de usuarios (renderizado por JS con datos de PHP) ─────────────── -->
   <?php
+    require_once __DIR__ . "/../../models/UsuarioModel.php";
     try {
-      /*
-       * JOIN con rol  → obtener nombre_rol (no existe columna "rol" en personal)
-       * JOIN con users → obtener nombre, telefono, correo (no están en personal)
-       */
-      $stmt = $conn->prepare("
-        SELECT
-          p.id_personal,
-          p.usuario,
-          r.nombre_rol  AS rol,
-          u.nombre,
-          u.telefono,
-          u.correo
-        FROM personal p
-        INNER JOIN rol   r ON p.id_rol       = r.id_rol
-        INNER JOIN users u ON p.cedula_users  = u.cedula
-        ORDER BY p.id_personal ASC
-      ");
-      $stmt->execute();
-      $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+      $usuarioModel = new UsuarioModel($conn);
+      $usuarios = $usuarioModel->obtenerTodos();
     } catch(Exception $e){
       $usuarios = [];
     }

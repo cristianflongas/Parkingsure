@@ -8,10 +8,11 @@ $conn = $database->conectar();
 $usuario  = $_POST['usuario'];
 $password = $_POST['password'];
 
-// Busca el usuario en la BD por usuario (con JOIN para obtener el rol)
-$sql = "SELECT p.*, r.nombre_rol 
+// Busca el usuario en la BD por usuario (con JOIN para obtener el rol y datos personales de users)
+$sql = "SELECT p.*, r.nombre_rol, u.nombre, u.correo, u.telefono 
         FROM personal p 
         INNER JOIN rol r ON p.id_rol = r.id_rol 
+        INNER JOIN users u ON p.cedula_users = u.cedula
         WHERE p.usuario = :usuario";
 
 $stmt = $conn->prepare($sql);
